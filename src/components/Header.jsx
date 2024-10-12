@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { logout } from '../firebase';
-import ProjectManager from './ProjectManager';
 
 function Header({ user, currentProject, setCurrentProject, autoSaveStatus }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -12,17 +11,6 @@ function Header({ user, currentProject, setCurrentProject, autoSaveStatus }) {
 
   return (
     <header className="header">
-      <div className="logo">Scholast</div>
-      {user && (
-        <div className="center-menu">
-          <ProjectManager 
-            user={user} 
-            currentProject={currentProject} 
-            setCurrentProject={setCurrentProject} 
-          />
-          {autoSaveStatus && <span className="auto-save-status">{autoSaveStatus}</span>}
-        </div>
-      )}
       {user ? (
         <div className="user-info">
           <span className="user-name" onClick={toggleUserMenu}>
