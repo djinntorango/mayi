@@ -5,6 +5,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import { FullPageSkeletonLoader } from './components/SkeletonLoader';
 import Dashboard from './components/Dashboard';
+import AuthPage from './components/AuthPage';
 import { auth } from './firebase';
 import './app.css';
  
