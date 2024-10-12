@@ -13,7 +13,7 @@ import StyleSettings from './components/Style';
 import Gpt from './components/Gpt';
 import { auth } from './firebase';
 import './app.css';
-
+ 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
