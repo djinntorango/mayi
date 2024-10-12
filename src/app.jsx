@@ -5,12 +5,6 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import { FullPageSkeletonLoader } from './components/SkeletonLoader';
 import Dashboard from './components/Dashboard';
-import Outline from './components/Outline';
-import CharacterDatabase from './components/CharacterDatabase';
-import DraftEditor from './components/DraftEditor';
-import AuthPage from './components/AuthPage';
-import StyleSettings from './components/Style';
-import Gpt from './components/Gpt';
 import { auth } from './firebase';
 import './app.css';
  
@@ -48,11 +42,6 @@ function App() {
             <Routes>
               <Route path="/auth" element={user ? <Navigate to="/" /> : <AuthPage />} />
               <Route path="/" element={user ? <Dashboard currentProject={currentProject} /> : <Navigate to="/auth" />} />
-              <Route path="/outline" element={user ? <Outline currentProject={currentProject} setAutoSaveStatus={setAutoSaveStatus} /> : <Navigate to="/auth" />} />
-              <Route path="/characters" element={user ? <CharacterDatabase currentProject={currentProject} /> : <Navigate to="/auth" />} />
-              <Route path="/draft" element={user ? <DraftEditor currentProject={currentProject} /> : <Navigate to="/auth" />} />
-              <Route path="/style" element={user ? <StyleSettings currentProject={currentProject} /> : <Navigate to="/auth" />} />
-              <Route path="/gpt" element={<Gpt currentProject={currentProject} />} />
             </Routes>
           </main>
         </div>
