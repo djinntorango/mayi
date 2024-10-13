@@ -10,6 +10,7 @@ function Prewrite() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [user] = useAuthState(auth);
   const firestore = getFirestore();
+  const [isFetched, setIsFetched] = useState(false); // Track if data has been fetched
 
   const questions = [
     "Let's write a story today! What's the main character's name?",
@@ -30,7 +31,7 @@ function Prewrite() {
 
   useEffect(() => {
     const fetchUserResponses = async () => {
-      if (!user) return;
+      if (!user || isFetched) return; // Avoid fetching again
 
       try {
         const docRef = doc(firestore, "users", user.uid, "prewrites", "latest");
@@ -48,13 +49,14 @@ function Prewrite() {
             setConversation(prev => [...prev, ...updatedConversation]);
           }
         }
+        setIsFetched(true); // Mark as fetched
       } catch (error) {
         console.error("Error fetching user responses:", error);
       }
     };
 
     fetchUserResponses();
-  }, [user, firestore, questions]);
+  }, [user, firestore, questions, isFetched]);
 
   const handleUserInput = (e) => {
     e.preventDefault();
