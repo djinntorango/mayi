@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
+import StoryOrganizer from './StoryOrganizer';
 
 function Prewrite() {
   const [conversation, setConversation] = useState([]);
@@ -35,7 +36,6 @@ function Prewrite() {
               { sender: 'user', text: response.answer }
             ]);
             
-            // Add the next question if there are more questions
             if (data.responses.length < questions.length) {
               updatedConversation.push({ 
                 sender: 'system', 
@@ -86,6 +86,23 @@ function Prewrite() {
     setCurrentQuestionIndex(currentQuestionIndex + 1);
   };
 
+  const handleOrganizerUpdate = (updatedResponses) => {
+    setUserResponses(updatedResponses);
+    const updatedConversation = updatedResponses.flatMap((response, index) => [
+      { sender: 'system', text: questions[index] },
+      { sender: 'user', text: response.answer }
+    ]);
+    
+    if (updatedResponses.length < questions.length) {
+      updatedConversation.push({ 
+        sender: 'system', 
+        text: questions[updatedResponses.length] 
+      });
+    }
+    
+    setConversation(updatedConversation);
+  };
+
   useEffect(() => {
     if (!user || userResponses.length === 0) return;
 
@@ -105,11 +122,11 @@ function Prewrite() {
   }, [userResponses, currentQuestionIndex, user, firestore]);
 
   return (
-    <div className="prewrite-container main-container">
-      <div className="chat-interface">
-        <div className="conversation-box">
+    <div className="prewrite-container main-container flex">
+      <div className="chat-interface flex-1 mr-4">
+        <div className="conversation-box mb-4 p-4 bg-gray-100 rounded-lg max-h-[70vh] overflow-y-auto">
           {conversation.map((entry, index) => (
-            <div key={index} className={`message ${entry.sender}`}>
+            <div key={index} className={`message ${entry.sender} mb-2 p-2 rounded ${entry.sender === 'system' ? 'bg-blue-100' : 'bg-green-100'}`}>
               <p>{entry.text}</p>
             </div>
           ))}
@@ -120,21 +137,15 @@ function Prewrite() {
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             placeholder="Type your answer..."
+            className="w-full p-2 border rounded"
             autoFocus
           />
-          <button type="submit">Send</button>
+          <button type="submit" className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Send</button>
         </form>
       </div>
 
-      <div className="side-panel">
-        <h3>Your Story Details</h3>
-        <ul>
-          {userResponses.map((response, index) => (
-            <li key={index}>
-              <strong>{response.question}</strong>: {response.answer}
-            </li>
-          ))}
-        </ul>
+      <div className="side-panel flex-1">
+        <StoryOrganizer responses={userResponses} onUpdate={handleOrganizerUpdate} />
       </div>
     </div>
   );
