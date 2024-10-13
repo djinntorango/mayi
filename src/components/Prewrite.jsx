@@ -10,7 +10,7 @@ function Prewrite() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [user] = useAuthState(auth);
   const firestore = getFirestore();
-  const [isFetched, setIsFetched] = useState(false); // Track if data has been fetched
+  const [isFetched, setIsFetched] = useState(false);
 
   const questions = [
     "Let's write a story today! What's the main character's name?",
@@ -21,8 +21,10 @@ function Prewrite() {
 
   useEffect(() => {
     const initializeConversation = () => {
-      if (userResponses.length === 0) {
-        setConversation([{ sender: 'system', text: questions[0] }]);
+      const nextQuestionIndex = userResponses.length; // Get next question index based on responses
+      if (nextQuestionIndex < questions.length) {
+        setConversation([{ sender: 'system', text: questions[nextQuestionIndex] }]);
+        setCurrentQuestionIndex(nextQuestionIndex); // Update the current question index
       }
     };
 
@@ -31,7 +33,7 @@ function Prewrite() {
 
   useEffect(() => {
     const fetchUserResponses = async () => {
-      if (!user || isFetched) return; // Avoid fetching again
+      if (!user || isFetched) return;
 
       try {
         const docRef = doc(firestore, "users", user.uid, "prewrites", "latest");
@@ -49,7 +51,7 @@ function Prewrite() {
             setConversation(prev => [...prev, ...updatedConversation]);
           }
         }
-        setIsFetched(true); // Mark as fetched
+        setIsFetched(true);
       } catch (error) {
         console.error("Error fetching user responses:", error);
       }
@@ -67,8 +69,10 @@ function Prewrite() {
       { sender: 'user', text: userInput },
     ];
 
-    if (currentQuestionIndex + 1 < questions.length) {
-      newConversation.push({ sender: 'system', text: questions[currentQuestionIndex + 1] });
+    const nextIndex = currentQuestionIndex + 1; // Calculate next question index
+
+    if (nextIndex < questions.length) {
+      newConversation.push({ sender: 'system', text: questions[nextIndex] });
     }
 
     const newUserResponses = [
@@ -79,7 +83,7 @@ function Prewrite() {
     setConversation(newConversation);
     setUserResponses(newUserResponses);
     setUserInput("");
-    setCurrentQuestionIndex(currentQuestionIndex + 1);
+    setCurrentQuestionIndex(nextIndex);
   };
 
   useEffect(() => {
