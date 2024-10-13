@@ -20,18 +20,6 @@ function Prewrite() {
   ];
 
   useEffect(() => {
-    const initializeConversation = () => {
-      const nextQuestionIndex = userResponses.length; // Get next question index based on responses
-      if (nextQuestionIndex < questions.length) {
-        setConversation([{ sender: 'system', text: questions[nextQuestionIndex] }]);
-        setCurrentQuestionIndex(nextQuestionIndex); // Update the current question index
-      }
-    };
-
-    initializeConversation();
-  }, [questions, userResponses]);
-
-  useEffect(() => {
     const fetchUserResponses = async () => {
       if (!user || isFetched) return;
 
@@ -42,13 +30,12 @@ function Prewrite() {
           const data = docSnap.data();
           if (data.responses) {
             setUserResponses(data.responses);
-            const updatedConversation = data.responses.map((response, index) => {
-              return [
-                { sender: 'user', text: response.answer },
-                { sender: 'system', text: questions[index + 1] || '' }
-              ];
-            }).flat();
-            setConversation(prev => [...prev, ...updatedConversation]);
+            const updatedConversation = data.responses.flatMap((response, index) => [
+              { sender: 'system', text: questions[index] },
+              { sender: 'user', text: response.answer }
+            ]);
+            setConversation(updatedConversation);
+            setCurrentQuestionIndex(data.responses.length);
           }
         }
         setIsFetched(true);
@@ -60,6 +47,12 @@ function Prewrite() {
     fetchUserResponses();
   }, [user, firestore, questions, isFetched]);
 
+  useEffect(() => {
+    if (isFetched && conversation.length === 0) {
+      setConversation([{ sender: 'system', text: questions[0] }]);
+    }
+  }, [isFetched, conversation, questions]);
+
   const handleUserInput = (e) => {
     e.preventDefault();
     if (userInput.trim() === "") return;
@@ -69,10 +62,8 @@ function Prewrite() {
       { sender: 'user', text: userInput },
     ];
 
-    const nextIndex = currentQuestionIndex + 1; // Calculate next question index
-
-    if (nextIndex < questions.length) {
-      newConversation.push({ sender: 'system', text: questions[nextIndex] });
+    if (currentQuestionIndex + 1 < questions.length) {
+      newConversation.push({ sender: 'system', text: questions[currentQuestionIndex + 1] });
     }
 
     const newUserResponses = [
@@ -83,7 +74,7 @@ function Prewrite() {
     setConversation(newConversation);
     setUserResponses(newUserResponses);
     setUserInput("");
-    setCurrentQuestionIndex(nextIndex);
+    setCurrentQuestionIndex(currentQuestionIndex + 1);
   };
 
   useEffect(() => {
@@ -92,14 +83,17 @@ function Prewrite() {
     const saveToFirestore = async () => {
       try {
         const docRef = doc(firestore, "users", user.uid, "prewrites", "latest");
-        await setDoc(docRef, { responses: userResponses }, { merge: true });
+        await setDoc(docRef, { 
+          responses: userResponses,
+          currentQuestionIndex: currentQuestionIndex
+        }, { merge: true });
       } catch (error) {
         console.error("Error saving prewrite data:", error);
       }
     };
 
     saveToFirestore();
-  }, [userResponses, user, firestore]);
+  }, [userResponses, currentQuestionIndex, user, firestore]);
 
   return (
     <div className="prewrite-container main-container">
