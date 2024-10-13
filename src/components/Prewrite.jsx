@@ -124,29 +124,27 @@ function Prewrite() {
   }, [userResponses, currentQuestionIndex, user, firestore]);
 
   return (
-    <div className="prewrite-container main-container flex">
-      <div className="chat-interface flex-1 mr-4">
-        <div className="conversation-box mb-4 p-4 bg-gray-100 rounded-lg max-h-[70vh] overflow-y-auto">
-          {conversation.map((entry, index) => (
-            <div key={index} className={`message ${entry.sender} mb-2 p-2 rounded ${entry.sender === 'system' ? 'bg-blue-100' : 'bg-green-100'}`}>
-              <p>{entry.text}</p>
-            </div>
-          ))}
+    <div className="container">
+      <div className="prewrite-container">
+        <div className="chat-interface">
+          <div className="conversation-box">
+            {conversation.map((entry, index) => (
+              <div key={index} className={`message ${entry.sender}`}>
+                <p>{entry.text}</p>
+              </div>
+            ))}
+          </div>
+          <form className="input-box" onSubmit={handleUserInput}>
+            <input
+              type="text"
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              placeholder="Type your answer..."
+            />
+            <button type="submit">Send</button>
+          </form>
         </div>
-        <form className="input-box" onSubmit={handleUserInput}>
-          <input
-            type="text"
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Type your answer..."
-            className="w-full p-2 border rounded"
-            autoFocus
-          />
-          <button type="submit" className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Send</button>
-        </form>
-      </div>
 
-      <div className="side-panel flex-1">
         <StoryOrganizer responses={userResponses} onUpdate={handleOrganizerUpdate} />
       </div>
     </div>
