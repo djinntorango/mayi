@@ -19,6 +19,13 @@ function Prewrite() {
     "How does the story end?"
   ];
 
+  // Set the first question when the component mounts
+  useEffect(() => {
+    if (conversation.length === 0 && currentQuestionIndex === 0) {
+      setConversation([{ sender: 'system', text: questions[0] }]);  // Set the first question
+    }
+  }, [conversation, currentQuestionIndex, questions]);
+
   // Update conversation and side panel with new responses
   const handleUserInput = (e) => {
     e.preventDefault();
@@ -28,8 +35,12 @@ function Prewrite() {
     const newConversation = [
       ...conversation,
       { sender: 'user', text: userInput },  // Add user's response to the conversation
-      { sender: 'system', text: questions[currentQuestionIndex + 1] }  // Queue the next question
     ];
+
+    // Only queue the next question if there are more questions left
+    if (currentQuestionIndex + 1 < questions.length) {
+      newConversation.push({ sender: 'system', text: questions[currentQuestionIndex + 1] });
+    }
 
     const newUserResponses = [
       ...userResponses,
