@@ -34,6 +34,15 @@ function Prewrite() {
               { sender: 'system', text: questions[index] },
               { sender: 'user', text: response.answer }
             ]);
+            
+            // Add the next question if there are more questions
+            if (data.responses.length < questions.length) {
+              updatedConversation.push({ 
+                sender: 'system', 
+                text: questions[data.responses.length] 
+              });
+            }
+            
             setConversation(updatedConversation);
             setCurrentQuestionIndex(data.responses.length);
           }
