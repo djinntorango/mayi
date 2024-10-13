@@ -122,8 +122,7 @@ function Prewrite() {
   }, [userResponses, currentQuestionIndex, user, firestore]);
 
   return (
-    <div className="container">
-      <div className="prewrite-container">
+      <div className="prewrite-container main-container">
         <div className="chat-interface">
           <div className="conversation-box">
             {conversation.map((entry, index) => (
@@ -145,7 +144,6 @@ function Prewrite() {
 
         <StoryOrganizer responses={userResponses} onUpdate={handleOrganizerUpdate} />
       </div>
-    </div>
   );
 }
 
