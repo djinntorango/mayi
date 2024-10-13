@@ -230,7 +230,6 @@ button {
 /* Prewrite */
 .prewrite-container {
   display: flex;
-  height: 100vh;
 }
 
 .chat-interface {
