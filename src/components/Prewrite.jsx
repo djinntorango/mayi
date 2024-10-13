@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
+import './Prewrite.css';  // Add custom styling as needed
 
 function Prewrite() {
   const [conversation, setConversation] = useState([]);
@@ -69,7 +70,8 @@ function Prewrite() {
   };
 
   return (
-    <div className="prewrite-container">
+    <div className="prewrite-layout">
+      {/* Chat window with questions and responses */}
       <div className="chat-window">
         {conversation.map((msg, index) => (
           <div key={index} className={`chat-message ${msg.role}`}>
@@ -82,6 +84,18 @@ function Prewrite() {
           </div>
         )}
       </div>
+
+      {/* Side panel showing user's responses */}
+      <div className="response-panel">
+        <h3>Your Responses</h3>
+        <ul>
+          {conversation.filter(msg => msg.role === 'user').map((msg, index) => (
+            <li key={index}>{msg.content}</li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Input section */}
       <div className="user-input">
         <input
           type="text"
