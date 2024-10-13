@@ -1,86 +1,97 @@
-import React, { useState } from 'react';
-
+import React, { useState, useEffect } from 'react';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase';
 
 function Prewrite() {
-  const [step, setStep] = useState(0);
-  const [responses, setResponses] = useState({
-    storyTitle: "",
-    mainCharacter: "",
-    setting: "",
-    goal: "",
-    conflict: "",
-  });
-  const [currentInput, setCurrentInput] = useState("");
+  const [conversation, setConversation] = useState([]);
+  const [userInput, setUserInput] = useState("");
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [user] = useAuthState(auth);
+  const firestore = getFirestore();
 
+  // Pre-defined questions
   const questions = [
-    "Let's brainstorm your story! What's the title?",
-    "Who is the main character?",
-    "Where does your character live?",
-    "What does your character want to achieve?",
-    "What is the main problem your character faces?",
+    "Today we'll write a story about... What is the topic of your story?",
+    "Who is the main character in your story? What's their name?",
+    "Where does the main character live?",
+    "What is the main challenge or problem that your character faces?"
   ];
 
-  const handleInput = (e) => {
-    setCurrentInput(e.target.value);
+  // Function to save conversation to Firestore
+  const saveConversationToFirestore = async (newConversation) => {
+    if (user) {
+      const userDocRef = doc(firestore, 'conversations', user.uid);
+      await setDoc(userDocRef, { conversation: newConversation });
+    }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!currentInput) return;
+  // Load conversation from localStorage or Firestore when the component mounts
+  useEffect(() => {
+    const loadConversation = async () => {
+      if (user) {
+        const userDocRef = doc(firestore, 'conversations', user.uid);
+        const docSnap = await getDoc(userDocRef);
+        
+        if (docSnap.exists()) {
+          const savedConversation = docSnap.data().conversation;
+          setConversation(savedConversation);
+          setCurrentQuestionIndex(savedConversation.length / 2); // Assuming one question and one response are saved together
+        }
+      } else {
+        const savedConversation = localStorage.getItem('prewriteConversation');
+        if (savedConversation) {
+          setConversation(JSON.parse(savedConversation));
+          setCurrentQuestionIndex(JSON.parse(savedConversation).length / 2);
+        }
+      }
+    };
 
-    // Update responses based on the current step
-    switch (step) {
-      case 0:
-        setResponses(prev => ({ ...prev, storyTitle: currentInput }));
-        break;
-      case 1:
-        setResponses(prev => ({ ...prev, mainCharacter: currentInput }));
-        break;
-      case 2:
-        setResponses(prev => ({ ...prev, setting: currentInput }));
-        break;
-      case 3:
-        setResponses(prev => ({ ...prev, goal: currentInput }));
-        break;
-      case 4:
-        setResponses(prev => ({ ...prev, conflict: currentInput }));
-        break;
-      default:
-        break;
+    loadConversation();
+  }, [user, firestore]);
+
+  // Function to handle user's input submission
+  const handleUserInput = () => {
+    if (userInput.trim() && currentQuestionIndex < questions.length) {
+      const question = { role: 'system', content: questions[currentQuestionIndex] };
+      const userResponse = { role: 'user', content: userInput };
+      const updatedConversation = [...conversation, question, userResponse];
+
+      // Update conversation state and persist it locally and in Firestore
+      setConversation(updatedConversation);
+      localStorage.setItem('prewriteConversation', JSON.stringify(updatedConversation));
+      saveConversationToFirestore(updatedConversation);
+
+      // Clear the input field and move to the next question
+      setUserInput("");
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
-
-    setCurrentInput(""); // Reset input field
-    setStep(step + 1); // Move to the next question
   };
 
   return (
     <div className="prewrite-container">
-      <div className="prewrite-conversation">
-        {step < questions.length ? (
-          <>
-            <p className="prewrite-message">{questions[step]}</p>
-            <form onSubmit={handleSubmit}>
-              <input 
-                type="text" 
-                value={currentInput} 
-                onChange={handleInput} 
-                placeholder="Type your response..." 
-              />
-              <button type="submit">Send</button>
-            </form>
-          </>
-        ) : (
-          <p className="prewrite-message">Awesome! You've completed the brainstorming.</p>
+      <div className="chat-window">
+        {conversation.map((msg, index) => (
+          <div key={index} className={`chat-message ${msg.role}`}>
+            <p>{msg.content}</p>
+          </div>
+        ))}
+        {currentQuestionIndex < questions.length && (
+          <div className="chat-message system">
+            <p>{questions[currentQuestionIndex]}</p>
+          </div>
         )}
       </div>
-
-      <div className="prewrite-summary">
-        <h3>Story Summary</h3>
-        <p><strong>Title:</strong> {responses.storyTitle}</p>
-        <p><strong>Main Character:</strong> {responses.mainCharacter}</p>
-        <p><strong>Setting:</strong> {responses.setting}</p>
-        <p><strong>Character Goal:</strong> {responses.goal}</p>
-        <p><strong>Conflict:</strong> {responses.conflict}</p>
+      <div className="user-input">
+        <input
+          type="text"
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          placeholder="Type your response..."
+        />
+        <button onClick={handleUserInput} disabled={currentQuestionIndex >= questions.length}>
+          Send
+        </button>
       </div>
     </div>
   );
