@@ -9,6 +9,7 @@ import AuthPage from './components/AuthPage';
 import Prewrite from './components/Prewrite';
 import { auth } from './firebase';
 import './app.css';
+import './styles/globals.css';
  
 function App() {
   const [isLoading, setIsLoading] = useState(true);
