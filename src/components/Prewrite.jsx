@@ -122,28 +122,33 @@ function Prewrite() {
   }, [userResponses, currentQuestionIndex, user, firestore]);
 
   return (
-      <div className="prewrite-container main-container">
-        <div className="chat-interface">
-          <div className="conversation-box">
-            {conversation.map((entry, index) => (
-              <div key={index} className={`message ${entry.sender}`}>
-                <p>{entry.text}</p>
+    <div className="prewrite-container main-container">
+      <div className="chat-interface">
+        <div className="conversation-box">
+          {conversation.map((entry, index) => (
+            <div key={index} className={`message ${entry.sender}`}>
+              <div className="sender">
+                {entry.sender === 'user' ? user.displayName : 'Teacher'}
               </div>
-            ))}
-          </div>
-          <form className="input-box" onSubmit={handleUserInput}>
-            <input
-              type="text"
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              placeholder="Type your answer..."
-            />
-            <button type="submit">Send</button>
-          </form>
+              <div className="content">
+                {entry.text}
+              </div>
+            </div>
+          ))}
         </div>
-
-        <StoryOrganizer responses={userResponses} onUpdate={handleOrganizerUpdate} />
+        <form className="input-box" onSubmit={handleUserInput}>
+          <input
+            type="text"
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            placeholder="Type your answer..."
+          />
+          <button type="submit">Send</button>
+        </form>
       </div>
+
+      <StoryOrganizer responses={userResponses} onUpdate={handleOrganizerUpdate} />
+    </div>
   );
 }
 
