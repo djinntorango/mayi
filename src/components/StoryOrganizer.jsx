@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, Input } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 
 function StoryOrganizer({ responses, onUpdate }) {
   const handleInputChange = (index, value) => {
