@@ -287,3 +287,61 @@ button {
   border-radius: 5px;
   background: #f8f8f8;
 }
+
+/* Prewrite */
+.prewrite-container {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+.prewrite-conversation {
+  width: 60%;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.prewrite-message {
+  background-color: #d1e7fd;
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+input {
+  padding: 10px;
+  width: calc(100% - 60px);
+  margin-right: 10px;
+}
+
+button {
+  padding: 10px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.prewrite-summary {
+  width: 35%;
+  background-color: #f4f4f4;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.prewrite-summary h3 {
+  margin-bottom: 20px;
+}
+
+.prewrite-summary p {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.prewrite-summary p strong {
+  color: #333;
+}

@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar';
 import { FullPageSkeletonLoader } from './components/SkeletonLoader';
 import Dashboard from './components/Dashboard';
 import AuthPage from './components/AuthPage';
+import Prewrite from './components/Prewrite';
 import { auth } from './firebase';
 import './app.css';
  
@@ -43,6 +44,7 @@ function App() {
             <Routes>
               <Route path="/auth" element={user ? <Navigate to="/" /> : <AuthPage />} />
               <Route path="/" element={user ? <Dashboard currentProject={currentProject} /> : <Navigate to="/auth" />} />
+              <Route path="/prewrite" element={user ? <Prewrite /> : <Navigate to="/auth" />} />
             </Routes>
           </main>
         </div>

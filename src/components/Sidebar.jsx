@@ -8,7 +8,8 @@ function Sidebar() {
       <nav>
         <ul>
           <li><Link to="/">Dashboard</Link></li>
-          <li><Link to="/outline">Outline</Link></li>
+          <li><Link to="/prewrite">Prewrite</Link></li>
+          <li><Link to="/my-writing">My Writing</Link></li>
         </ul>
       </nav>
     </aside>
