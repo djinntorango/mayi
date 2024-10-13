@@ -3,8 +3,6 @@ import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
 import StoryOrganizer from './StoryOrganizer';
-import { Card, CardContent, CardHeader } from '../components/ui/card';
-import { Input } from '../components/ui/input';
 
 function Prewrite() {
   const [conversation, setConversation] = useState([]);
