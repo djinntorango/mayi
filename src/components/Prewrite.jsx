@@ -19,37 +19,41 @@ function Prewrite() {
   ];
 
   useEffect(() => {
-    if (conversation.length === 0 && currentQuestionIndex === 0) {
-      setConversation([{ sender: 'system', text: questions[0] }]);
-    }
-  }, [conversation, currentQuestionIndex, questions]);
+    const initializeConversation = () => {
+      if (userResponses.length === 0) {
+        setConversation([{ sender: 'system', text: questions[0] }]);
+      }
+    };
+
+    initializeConversation();
+  }, [questions, userResponses]);
 
   useEffect(() => {
-    if (user) {
-      const fetchUserResponses = async () => {
-        try {
-          const docRef = doc(firestore, "users", user.uid, "prewrites", "latest");
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.responses) {
-              setUserResponses(data.responses);
-              const updatedConversation = data.responses.map((response, index) => {
-                return [
-                  { sender: 'user', text: response.answer },
-                  { sender: 'system', text: questions[index + 1] || '' }
-                ];
-              }).flat();
-              setConversation(prev => [...prev, ...updatedConversation]);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching user responses:", error);
-        }
-      };
+    const fetchUserResponses = async () => {
+      if (!user) return;
 
-      fetchUserResponses();
-    }
+      try {
+        const docRef = doc(firestore, "users", user.uid, "prewrites", "latest");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.responses) {
+            setUserResponses(data.responses);
+            const updatedConversation = data.responses.map((response, index) => {
+              return [
+                { sender: 'user', text: response.answer },
+                { sender: 'system', text: questions[index + 1] || '' }
+              ];
+            }).flat();
+            setConversation(prev => [...prev, ...updatedConversation]);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user responses:", error);
+      }
+    };
+
+    fetchUserResponses();
   }, [user, firestore, questions]);
 
   const handleUserInput = (e) => {
