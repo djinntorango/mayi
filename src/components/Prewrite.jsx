@@ -4,14 +4,13 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
 
 function Prewrite() {
-  const [conversation, setConversation] = useState([]);  // Holds the full chat log
-  const [userResponses, setUserResponses] = useState([]);  // Holds the user's answers for the side panel
+  const [conversation, setConversation] = useState([]);
+  const [userResponses, setUserResponses] = useState([]);
   const [userInput, setUserInput] = useState("");
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [user] = useAuthState(auth);
   const firestore = getFirestore();
 
-  // Predefined questions
   const questions = [
     "Let's write a story today! What's the main character's name?",
     "Where does the main character live?",
@@ -19,25 +18,49 @@ function Prewrite() {
     "How does the story end?"
   ];
 
-  // Set the first question when the component mounts
   useEffect(() => {
     if (conversation.length === 0 && currentQuestionIndex === 0) {
-      setConversation([{ sender: 'system', text: questions[0] }]);  // Set the first question
+      setConversation([{ sender: 'system', text: questions[0] }]);
     }
   }, [conversation, currentQuestionIndex, questions]);
 
-  // Update conversation and side panel with new responses
+  useEffect(() => {
+    if (user) {
+      const fetchUserResponses = async () => {
+        try {
+          const docRef = doc(firestore, "users", user.uid, "prewrites", "latest");
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.responses) {
+              setUserResponses(data.responses);
+              const updatedConversation = data.responses.map((response, index) => {
+                return [
+                  { sender: 'user', text: response.answer },
+                  { sender: 'system', text: questions[index + 1] || '' }
+                ];
+              }).flat();
+              setConversation(prev => [...prev, ...updatedConversation]);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching user responses:", error);
+        }
+      };
+
+      fetchUserResponses();
+    }
+  }, [user, firestore, questions]);
+
   const handleUserInput = (e) => {
     e.preventDefault();
-
-    if (userInput.trim() === "") return;  // Don't allow empty input
+    if (userInput.trim() === "") return;
 
     const newConversation = [
       ...conversation,
-      { sender: 'user', text: userInput },  // Add user's response to the conversation
+      { sender: 'user', text: userInput },
     ];
 
-    // Only queue the next question if there are more questions left
     if (currentQuestionIndex + 1 < questions.length) {
       newConversation.push({ sender: 'system', text: questions[currentQuestionIndex + 1] });
     }
@@ -49,11 +72,10 @@ function Prewrite() {
 
     setConversation(newConversation);
     setUserResponses(newUserResponses);
-    setUserInput("");  // Clear the input field
+    setUserInput("");
     setCurrentQuestionIndex(currentQuestionIndex + 1);
   };
 
-  // Optionally, save the responses to Firestore
   useEffect(() => {
     if (!user || userResponses.length === 0) return;
 
