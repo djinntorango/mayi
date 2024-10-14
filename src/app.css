@@ -91,13 +91,14 @@ body {
   display: flex;
   flex: 1;
   position: relative;
+  margin-top: 8vh;
 }
 
 /* Sidebar */
 .sidebar {
-  width: 60px; /* Collapsed width */
+  width: 50px;
   background-color: #2c2c2c;
-  height: calc(100vh - 60px); /* Assuming 60px is the header height */
+  height: calc(100vh - 8vh);
   overflow-x: hidden;
   transition: width 0.3s ease;
   position: absolute;
@@ -109,11 +110,11 @@ body {
 .sidebar:hover,
 .sidebar:focus,
 .sidebar:focus-within {
-  width: 200px; /* Expanded width */
+  width: 200px;
 }
 
 .sidebar-content {
-  width: 200px; /* Full width of expanded sidebar */
+  width: 200px; 
   padding: 1rem;
 }
 
@@ -151,7 +152,6 @@ main {
   padding: 1rem;
   width: 100%;
 }
-
 
 /* When sidebar is expanded, adjust main area */
 .sidebar:hover ~ main,
