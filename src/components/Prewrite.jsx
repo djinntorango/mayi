@@ -14,9 +14,12 @@ function Prewrite() {
   const [isFetched, setIsFetched] = useState(false);
 
   const questions = [
-    "Let's write a story today! What's the main character's name?",
-    "Where does the main character live?",
-    "What is the main problem the character faces?",
+    "Let's write a story today! Who is the main character?",
+    "Where does the story take place?",
+    "What is the main problem or challenge in the story?",
+    "How is the problem solved?",
+    "What happens at the beginning of the story?",
+    "What important events happen in the middle of the story?",
     "How does the story end?"
   ];
 
@@ -101,6 +104,7 @@ function Prewrite() {
     }
     
     setConversation(updatedConversation);
+    setCurrentQuestionIndex(updatedResponses.length);
   };
 
   useEffect(() => {
