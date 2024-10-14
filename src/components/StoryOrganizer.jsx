@@ -8,10 +8,10 @@ function StoryOrganizer({ responses, onUpdate }) {
   };
 
   const elements = [
-    { name: 'Character', placeholder: 'Who is the main character?', className: 'character-setting' },
-    { name: 'Setting', placeholder: 'Where does the story take place?', className: 'character-setting' },
-    { name: 'Problem', placeholder: 'What is the main problem or challenge?', className: 'problem-solution' },
-    { name: 'Solution', placeholder: 'How is the problem solved?', className: 'problem-solution' },
+    { name: 'Character', placeholder: 'Who is the main character?', className: 'character charset' },
+    { name: 'Setting', placeholder: 'Where does the story take place?', className: 'setting charset' },
+    { name: 'Problem', placeholder: 'What is the main problem or challenge?', className: 'problem prosol' },
+    { name: 'Solution', placeholder: 'How is the problem solved?', className: 'solution prosol' },
     { name: 'Beginning', placeholder: 'What happens at the start of the story?', className: 'beginning' },
     { name: 'Middle', placeholder: 'What important events happen in the middle?', className: 'middle' },
     { name: 'End', placeholder: 'How does the story end?', className: 'end' }
