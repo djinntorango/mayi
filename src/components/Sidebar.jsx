@@ -1,18 +1,27 @@
-// src/components/Sidebar.js
 import React from 'react';
 import { Link } from 'react-router-dom';
 
 function Sidebar() {
   return (
-    <aside className="sidebar">
-      <nav>
+    <div className="sidebar">
+      <div className="sidebar-content">
         <ul>
-          <li><Link to="/">Dashboard</Link></li>
-          <li><Link to="/prewrite">Prewrite</Link></li>
-          <li><Link to="/my-writing">My Writing</Link></li>
+          <li>
+            <Link to="/">
+              <span className="sidebar-icon">🏠</span>
+              <span className="sidebar-text">Dashboard</span>
+            </Link>
+          </li>
+          <li>
+            <Link to="/prewrite">
+              <span className="sidebar-icon">✏️</span>
+              <span className="sidebar-text">Prewrite</span>
+            </Link>
+          </li>
+          {/* Add more menu items as needed */}
         </ul>
-      </nav>
-    </aside>
+      </div>
+    </div>
   );
 }
 

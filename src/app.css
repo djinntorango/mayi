@@ -86,40 +86,101 @@ body {
   cursor: pointer;
 }
 
+/* Main content */
 .main-content {
   display: flex;
   flex: 1;
+  position: relative;
 }
 
+/* Sidebar */
 .sidebar {
-  position: fixed;
-  top: 60px;
-  width: 200px;
+  width: 60px; /* Collapsed width */
   background-color: #2c2c2c;
+  height: calc(100vh - 60px); /* Assuming 60px is the header height */
+  overflow-x: hidden;
+  transition: width 0.3s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+}
+
+.sidebar:hover,
+.sidebar:focus,
+.sidebar:focus-within {
+  width: 200px; /* Expanded width */
+}
+
+.sidebar-content {
+  width: 200px; /* Full width of expanded sidebar */
   padding: 1rem;
-  height: calc(100vh - 60px);
 }
 
 .sidebar ul {
   list-style-type: none;
   padding: 0;
+  margin: 0;
 }
 
 .sidebar li {
   margin-bottom: 1rem;
+  white-space: nowrap;
 }
 
 .sidebar a {
   color: white;
   text-decoration: none;
+  display: flex;
+  align-items: center;
 }
 
+.sidebar-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+
+/* Main area */
 main {
-  padding: 2rem;
+  flex: 1;
+  margin-left: 60px; 
+  transition: margin-left 0.3s ease;
   background-color: #1e1e1e;
-  margin-top: 60px;
-  margin-left: 15rem;
+  padding: 1rem;
   width: 100%;
+}
+
+
+/* When sidebar is expanded, adjust main area */
+.sidebar:hover ~ main,
+.sidebar:focus ~ main,
+.sidebar:focus-within ~ main {
+  margin-left: 200px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 0;
+  }
+
+  .sidebar:hover,
+  .sidebar:focus,
+  .sidebar:focus-within {
+    width: 200px;
+  }
+
+  main {
+    margin-left: 0;
+  }
+
+  .sidebar:hover ~ main,
+  .sidebar:focus ~ main,
+  .sidebar:focus-within ~ main {
+    margin-left: 200px;
+  }
 }
 
 button {
