@@ -45,21 +45,27 @@ function Prewrite() {
     try {
       const currentProgress = previousResponses.length;
       const isLastQuestion = currentProgress === storyQuestions.length - 1;
+      const currentQuestion = storyQuestions[currentProgress];
       
-      let corePrompt = `You are a writing teacher helping a student develop their story. Here is their progress so far:
+      let corePrompt = `You are a writing teacher helping a student develop their story. 
+      
+      Previous responses:
       ${previousResponses.map(r => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n')}
       
-      Current question: ${storyQuestions[currentProgress]}
-      Student's answer: ${userAnswer}
+      Current question: "${currentQuestion}"
+      Student's answer: "${userAnswer}"
       
-      Provide feedback on their answer. Then, choose ONE of these actions:
-      1. If the answer needs more detail or development, ask ONE specific follow-up question to help them expand.
-      2. If the answer is sufficient and this isn't the last question, respond with "NEXT" followed by the next question: "${isLastQuestion ? '' : storyQuestions[currentProgress + 1]}"
-      3. If this is the last question and the answer is good, provide brief encouraging final feedback.
-      
-      Format your response as:
-      [Feedback]
-      [Action: either a follow-up question, "NEXT" + next question, or final feedback]`;
+      First, determine if the student's answer is appropriate for the current question.
+      Then, respond in this exact format:
+
+      FEEDBACK: Provide brief, encouraging feedback about their answer. If they seem off-track, gently redirect them.
+
+      ACTION: Choose exactly ONE of these:
+      1. If the answer needs more development, write a specific follow-up question (without any labels or brackets).
+      2. If the answer is sufficient and there are more questions, write "NEXT:" followed by the next question.
+      3. If this is the final question, write "FINAL:" followed by brief concluding feedback.
+
+      Remember: The first question is about the main character, the second about setting, etc. Make sure feedback and questions align with the current story element being discussed.`;
 
       const response = await fetch('https://prewriteresponse-co3kwnyxqq-uc.a.run.app', {
         method: 'POST',
@@ -91,11 +97,14 @@ function Prewrite() {
 
     setIsLoading(true);
     
-    // Get AI response based on all previous responses
     const aiResponse = await getAIResponse(userInput, userResponses);
     
-    // Parse AI response to separate feedback and next action
-    const [feedback, action] = aiResponse.split('[Action:').map(str => str.trim());
+    // Parse the AI response
+    const feedbackMatch = aiResponse.match(/FEEDBACK:(.*?)(?=ACTION:|$)/s);
+    const actionMatch = aiResponse.match(/ACTION:(.*?)$/s);
+    
+    const feedback = feedbackMatch ? feedbackMatch[1].trim() : aiResponse;
+    const action = actionMatch ? actionMatch[1].trim() : '';
     
     const newConversation = [
       ...conversation,
@@ -112,12 +121,15 @@ function Prewrite() {
       }
     ];
 
-    // If the AI indicates to move to the next question
-    if (action && action.startsWith('NEXT')) {
-      const nextQuestion = action.replace('NEXT', '').trim();
+    // Handle the next action
+    if (action.startsWith('NEXT:')) {
+      const nextQuestion = action.replace('NEXT:', '').trim();
       newConversation.push({ sender: 'system', text: nextQuestion });
+    } else if (action.startsWith('FINAL:')) {
+      const finalFeedback = action.replace('FINAL:', '').trim();
+      newConversation.push({ sender: 'system', text: finalFeedback });
     } else if (action) {
-      // If AI asked a follow-up question
+      // It's a follow-up question
       newConversation.push({ sender: 'system', text: action });
     }
 
