@@ -1,4 +1,3 @@
-// export default Prewrite;
 import React, { useState, useEffect } from 'react';
 import { getFirestore, doc, setDoc, collection, addDoc } from 'firebase/firestore';
 import '../styles/prewrite.css';
@@ -7,12 +6,11 @@ function Prewrite() {
   const [conversation, setConversation] = useState([]);
   const [userResponses, setUserResponses] = useState([]);
   const [userInput, setUserInput] = useState("");
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [sessionId, setSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const firestore = getFirestore();
 
-  const baseQuestions = [
+  const storyQuestions = [
     "Let's write a story today! Who is the main character?",
     "Where does the story take place?",
     "What is the main problem or challenge in the story?",
@@ -25,7 +23,7 @@ function Prewrite() {
   // Initialize conversation with first question
   useEffect(() => {
     if (conversation.length === 0) {
-      setConversation([{ sender: 'system', text: baseQuestions[0] }]);
+      setConversation([{ sender: 'system', text: storyQuestions[0] }]);
       initializeSession();
     }
   }, []);
@@ -43,17 +41,26 @@ function Prewrite() {
     }
   };
 
-  const getAIFeedback = async (question, answer, isLastResponse) => {
+  const getAIResponse = async (userAnswer, previousResponses) => {
     try {
-      let corePrompt;
-      if (isLastResponse) {
-        corePrompt = "You are providing final feedback on a student's story. Be encouraging but brief.";
-      } else {
-        corePrompt = `You are helping a student develop their story. They are answering the question: "${question}"
-                      If their answer needs more detail or development, ask ONE follow-up question to help them expand.
-                      If their answer is sufficient, respond with exactly: "NEXT_QUESTION"`;
-      }
-  
+      const currentProgress = previousResponses.length;
+      const isLastQuestion = currentProgress === storyQuestions.length - 1;
+      
+      let corePrompt = `You are a writing teacher helping a student develop their story. Here is their progress so far:
+      ${previousResponses.map(r => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n')}
+      
+      Current question: ${storyQuestions[currentProgress]}
+      Student's answer: ${userAnswer}
+      
+      Provide feedback on their answer. Then, choose ONE of these actions:
+      1. If the answer needs more detail or development, ask ONE specific follow-up question to help them expand.
+      2. If the answer is sufficient and this isn't the last question, respond with "NEXT" followed by the next question: "${isLastQuestion ? '' : storyQuestions[currentProgress + 1]}"
+      3. If this is the last question and the answer is good, provide brief encouraging final feedback.
+      
+      Format your response as:
+      [Feedback]
+      [Action: either a follow-up question, "NEXT" + next question, or final feedback]`;
+
       const response = await fetch('https://prewriteresponse-co3kwnyxqq-uc.a.run.app', {
         method: 'POST',
         headers: {
@@ -61,23 +68,17 @@ function Prewrite() {
         },
         body: JSON.stringify({
           corePrompt: corePrompt,
-          prompt: answer
+          prompt: userAnswer
         })
       });
-  
+
       if (!response.ok) {
-        console.error('API Response not ok:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error details:', errorText);
         throw new Error(`API returned ${response.status}`);
       }
-  
+
       const data = await response.json();
-      console.log('API Response:', data);
-  
-      // Extract the text response from the API response
-      return data.text || "Let's move to the next question.";
-  
+      return data.text;
+
     } catch (error) {
       console.error('Error in getAIResponse:', error);
       return "I encountered an error. Let's continue with the next question.";
@@ -90,38 +91,39 @@ function Prewrite() {
 
     setIsLoading(true);
     
-    const currentQuestion = baseQuestions[currentQuestionIndex];
-    const feedback = await getAIFeedback(currentQuestion, userInput);
+    // Get AI response based on all previous responses
+    const aiResponse = await getAIResponse(userInput, userResponses);
+    
+    // Parse AI response to separate feedback and next action
+    const [feedback, action] = aiResponse.split('[Action:').map(str => str.trim());
     
     const newConversation = [
       ...conversation,
       { sender: 'user', text: userInput },
+      { sender: 'system', text: feedback }
     ];
-
-    if (feedback) {
-      newConversation.push({ sender: 'system', text: feedback });
-    }
-
-    if (currentQuestionIndex + 1 < baseQuestions.length) {
-      newConversation.push({ 
-        sender: 'system', 
-        text: baseQuestions[currentQuestionIndex + 1] 
-      });
-    }
 
     const newUserResponses = [
       ...userResponses,
-      { 
-        question: currentQuestion, 
+      {
+        question: storyQuestions[userResponses.length],
         answer: userInput,
-        feedback: feedback 
+        feedback: feedback
       }
     ];
+
+    // If the AI indicates to move to the next question
+    if (action && action.startsWith('NEXT')) {
+      const nextQuestion = action.replace('NEXT', '').trim();
+      newConversation.push({ sender: 'system', text: nextQuestion });
+    } else if (action) {
+      // If AI asked a follow-up question
+      newConversation.push({ sender: 'system', text: action });
+    }
 
     setConversation(newConversation);
     setUserResponses(newUserResponses);
     setUserInput("");
-    setCurrentQuestionIndex(currentQuestionIndex + 1);
 
     // Save to Firestore
     if (sessionId) {
