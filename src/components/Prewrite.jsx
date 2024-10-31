@@ -202,24 +202,25 @@ function Prewrite() {
     }
   };
 
-  const getAIResponse = async (question, answer, isLastResponse) => {
+  const getAIFeedback = async (question, answer, isLastResponse) => {
     try {
-      console.log('Sending request with:', {
-        question,
-        answer,
-        isLastResponse
-      });
+      let corePrompt;
+      if (isLastResponse) {
+        corePrompt = "You are providing final feedback on a student's story. Be encouraging but brief.";
+      } else {
+        corePrompt = `You are helping a student develop their story. They are answering the question: "${question}"
+                      If their answer needs more detail or development, ask ONE follow-up question to help them expand.
+                      If their answer is sufficient, respond with exactly: "NEXT_QUESTION"`;
+      }
   
       const response = await fetch('https://teacherresponse-co3kwnyxqq-uc.a.run.app/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Add any required API keys or auth headers here
         },
         body: JSON.stringify({
-          question: question,
-          answer: answer,
-          isLast: isLastResponse
+          corePrompt: corePrompt,
+          prompt: answer
         })
       });
   
@@ -233,8 +234,8 @@ function Prewrite() {
       const data = await response.json();
       console.log('API Response:', data);
   
-      // Check the actual structure of your API response
-      return data.response || data.message || "I couldn't process that response. Let's move to the next question.";
+      // Extract the text response from the API response
+      return data.text || "Let's move to the next question.";
   
     } catch (error) {
       console.error('Error in getAIResponse:', error);
@@ -249,7 +250,7 @@ function Prewrite() {
     setIsLoading(true);
     
     const currentQuestion = baseQuestions[currentQuestionIndex];
-    const feedback = await getAIResponse(currentQuestion, userInput);
+    const feedback = await getAIFeedback(currentQuestion, userInput);
     
     const newConversation = [
       ...conversation,
