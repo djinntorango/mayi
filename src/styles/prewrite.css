@@ -212,9 +212,7 @@
 }
 
 @media (max-width: 992px) {
-  .prewrite-container {
-    flex-direction: column;
-  }
+
 
   .chat-interface {
     max-width: 100%;
