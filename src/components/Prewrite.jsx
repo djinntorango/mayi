@@ -202,34 +202,43 @@ function Prewrite() {
     }
   };
 
-  const getAIFeedback = async (question, answer) => {
+  const getAIResponse = async (question, answer, isLastResponse) => {
     try {
-      const response = await fetch('https://teacherresponse-co3kwnyxqq-uc.a.run.app', {
+      console.log('Sending request with:', {
+        question,
+        answer,
+        isLastResponse
+      });
+  
+      const response = await fetch('https://teacherresponse-co3kwnyxqq-uc.a.run.app/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // Add any required API keys or auth headers here
         },
         body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: `You are a helpful writing teacher. The student is answering the question: "${question}". 
-                       Provide encouraging feedback and a follow-up question or suggestion to help them develop their answer further. 
-                       Keep your response brief and friendly. If the answer is too short or vague, encourage more detail.`
-            },
-            {
-              role: "user",
-              content: answer
-            }
-          ]
+          question: question,
+          answer: answer,
+          isLast: isLastResponse
         })
       });
-
+  
+      if (!response.ok) {
+        console.error('API Response not ok:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error details:', errorText);
+        throw new Error(`API returned ${response.status}`);
+      }
+  
       const data = await response.json();
-      return data.choices[0].message.content;
+      console.log('API Response:', data);
+  
+      // Check the actual structure of your API response
+      return data.response || data.message || "I couldn't process that response. Let's move to the next question.";
+  
     } catch (error) {
-      console.error('Error getting AI feedback:', error);
-      return null;
+      console.error('Error in getAIResponse:', error);
+      return "I encountered an error. Let's continue with the next question.";
     }
   };
 
@@ -240,7 +249,7 @@ function Prewrite() {
     setIsLoading(true);
     
     const currentQuestion = baseQuestions[currentQuestionIndex];
-    const feedback = await getAIFeedback(currentQuestion, userInput);
+    const feedback = await getAIResponse(currentQuestion, userInput);
     
     const newConversation = [
       ...conversation,
