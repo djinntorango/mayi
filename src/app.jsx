@@ -74,16 +74,10 @@ function App() {
   const [autoSaveStatus, setAutoSaveStatus] = useState("");
   const [isIframe, setIsIframe] = useState(false);
 
+
   useEffect(() => {
     // Check if running in iframe
     setIsIframe(window.self !== window.top);
-
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
   }, []);
 
   if (isLoading) {
