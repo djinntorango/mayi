@@ -18,30 +18,12 @@ function Prewrite() {
   ];
   
 
-  useEffect(() => {
-    function handleMessage(event) {
-      if (event.data.type === 'SET_TOPIC') {
-        setTopic(event.data.topic);
-      }
-    }
-
-    window.addEventListener('message', handleMessage);
-    
-    // Tell Storyline we're ready
-    window.parent.postMessage({ type: 'PREWRITE_READY' }, '*');
-
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  // Initialize conversation
+  // Initialize conversation with first question
   useEffect(() => {
     if (conversation.length === 0) {
-      setConversation([
-        { sender: 'system', text: topic ? `Your topic is: ${topic}` : '' },
-        { sender: 'system', text: storyQuestions[0] }
-      ].filter(msg => msg.text)); // Only include messages with text
+      setConversation([{ sender: 'system', text: storyQuestions[0] }]);
     }
-  }, [topic]);
+  }, []);
 
   // Send story data to Storyline
   const updateStoryline = (responses) => {
