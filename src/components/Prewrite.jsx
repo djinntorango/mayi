@@ -17,6 +17,7 @@ function Prewrite() {
     "How does the story end?"
   ];
   
+
   useEffect(() => {
     function handleMessage(event) {
       if (event.data.type === 'SET_TOPIC') {
@@ -41,12 +42,6 @@ function Prewrite() {
       ].filter(msg => msg.text)); // Only include messages with text
     }
   }, [topic]);
-  // Initialize conversation with first question
-  useEffect(() => {
-    if (conversation.length === 0) {
-      setConversation([{ sender: 'system', text: storyQuestions[0] }]);
-    }
-  }, []);
 
   // Send story data to Storyline
   const updateStoryline = (responses) => {
