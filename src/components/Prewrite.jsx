@@ -16,12 +16,31 @@ function Prewrite() {
     "What important events happen in the middle of the story?",
     "How does the story end?"
   ];
-
-  const player = GetPlayer();  
   
-  // Get existing data from Storyline variables
-  const topic = player.GetVar("topic");
+  useEffect(() => {
+    function handleMessage(event) {
+      if (event.data.type === 'SET_TOPIC') {
+        setTopic(event.data.topic);
+      }
+    }
 
+    window.addEventListener('message', handleMessage);
+    
+    // Tell Storyline we're ready
+    window.parent.postMessage({ type: 'PREWRITE_READY' }, '*');
+
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Initialize conversation
+  useEffect(() => {
+    if (conversation.length === 0) {
+      setConversation([
+        { sender: 'system', text: topic ? `Your topic is: ${topic}` : '' },
+        { sender: 'system', text: storyQuestions[0] }
+      ].filter(msg => msg.text)); // Only include messages with text
+    }
+  }, [topic]);
   // Initialize conversation with first question
   useEffect(() => {
     if (conversation.length === 0) {
@@ -182,7 +201,7 @@ function Prewrite() {
         <form className="input-box" onSubmit={handleUserInput}>
           <input
             type="text"
-            value={topic}
+            value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             placeholder="Type your answer..."
             disabled={isLoading}
