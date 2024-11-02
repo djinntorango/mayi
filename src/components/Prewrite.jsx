@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { getFirestore, doc, setDoc, collection, addDoc } from 'firebase/firestore';
 import '../styles/prewrite.css';
 
 function Prewrite() {
   const [conversation, setConversation] = useState([]);
   const [userResponses, setUserResponses] = useState([]);
   const [userInput, setUserInput] = useState("");
-  const [sessionId, setSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const firestore = getFirestore();
 
   const storyQuestions = [
     "Let's write a story today! Who is the main character?",
@@ -24,20 +21,45 @@ function Prewrite() {
   useEffect(() => {
     if (conversation.length === 0) {
       setConversation([{ sender: 'system', text: storyQuestions[0] }]);
-      initializeSession();
     }
   }, []);
 
-  const initializeSession = async () => {
+  const updateScorm = (responses) => {
     try {
-      const sessionsRef = collection(firestore, "story_sessions");
-      const docRef = await addDoc(sessionsRef, {
-        timestamp: new Date(),
-        responses: []
-      });
-      setSessionId(docRef.id);
+      // Create story elements object
+      const storyElements = {
+        character: responses[0]?.answer || '',
+        setting: responses[1]?.answer || '',
+        problem: responses[2]?.answer || '',
+        solution: responses[3]?.answer || '',
+        beginning: responses[4]?.answer || '',
+        middle: responses[5]?.answer || '',
+        ending: responses[6]?.answer || ''
+      };
+
+      // Access SCORM API through parent window
+      const scorm = window.parent.API;
+      if (scorm) {
+        // Save individual story elements
+        Object.entries(storyElements).forEach(([key, value]) => {
+          scorm.LMSSetValue(`cmi.objectives.${key}`, value);
+        });
+
+        // Save full story data as JSON in suspend_data
+        scorm.LMSSetValue('cmi.suspend_data', JSON.stringify({
+          elements: storyElements,
+          responses: responses
+        }));
+
+        // Set completion status if all questions are answered
+        if (responses.length === storyQuestions.length) {
+          scorm.LMSSetValue('cmi.completion_status', 'completed');
+        }
+
+        scorm.LMSCommit('');
+      }
     } catch (error) {
-      console.error("Error creating session:", error);
+      console.error('Error updating SCORM:', error);
     }
   };
 
@@ -137,18 +159,8 @@ function Prewrite() {
     setUserResponses(newUserResponses);
     setUserInput("");
 
-    // Save to Firestore
-    if (sessionId) {
-      try {
-        const sessionRef = doc(firestore, "story_sessions", sessionId);
-        await setDoc(sessionRef, {
-          timestamp: new Date(),
-          responses: newUserResponses
-        }, { merge: true });
-      } catch (error) {
-        console.error("Error saving responses:", error);
-      }
-    }
+    // Update SCORM data
+    updateScorm(newUserResponses);
 
     setIsLoading(false);
   };
