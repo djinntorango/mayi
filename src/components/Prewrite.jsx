@@ -17,6 +17,11 @@ function Prewrite() {
     "How does the story end?"
   ];
 
+  const player = GetPlayer();  
+  
+  // Get existing data from Storyline variables
+  const topic = player.GetVar("topic");
+
   // Initialize conversation with first question
   useEffect(() => {
     if (conversation.length === 0) {
@@ -177,7 +182,7 @@ function Prewrite() {
         <form className="input-box" onSubmit={handleUserInput}>
           <input
             type="text"
-            value={userInput}
+            value={topic}
             onChange={(e) => setUserInput(e.target.value)}
             placeholder="Type your answer..."
             disabled={isLoading}
