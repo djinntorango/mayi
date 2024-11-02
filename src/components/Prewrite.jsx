@@ -24,7 +24,8 @@ function Prewrite() {
     }
   }, []);
 
-  const updateScorm = (responses) => {
+  // Send story data to Storyline
+  const updateStoryline = (responses) => {
     try {
       // Create story elements object
       const storyElements = {
@@ -34,32 +35,18 @@ function Prewrite() {
         solution: responses[3]?.answer || '',
         beginning: responses[4]?.answer || '',
         middle: responses[5]?.answer || '',
-        ending: responses[6]?.answer || ''
+        ending: responses[6]?.answer || '',
+        isComplete: responses.length === storyQuestions.length
       };
 
-      // Access SCORM API through parent window
-      const scorm = window.parent.API;
-      if (scorm) {
-        // Save individual story elements
-        Object.entries(storyElements).forEach(([key, value]) => {
-          scorm.LMSSetValue(`cmi.objectives.${key}`, value);
-        });
+      // Send to parent (Storyline)
+      window.parent.postMessage({
+        type: 'STORY_UPDATE',
+        storyElements
+      }, '*');
 
-        // Save full story data as JSON in suspend_data
-        scorm.LMSSetValue('cmi.suspend_data', JSON.stringify({
-          elements: storyElements,
-          responses: responses
-        }));
-
-        // Set completion status if all questions are answered
-        if (responses.length === storyQuestions.length) {
-          scorm.LMSSetValue('cmi.completion_status', 'completed');
-        }
-
-        scorm.LMSCommit('');
-      }
     } catch (error) {
-      console.error('Error updating SCORM:', error);
+      console.error('Error updating Storyline:', error);
     }
   };
 
@@ -159,8 +146,8 @@ function Prewrite() {
     setUserResponses(newUserResponses);
     setUserInput("");
 
-    // Update SCORM data
-    updateScorm(newUserResponses);
+    // Update Storyline
+    updateStoryline(newUserResponses);
 
     setIsLoading(false);
   };
