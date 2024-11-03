@@ -1,6 +1,6 @@
 /* write.css */
 body {
-    background-color: none;
+    background-color: transparent !important;
 }
 
 :root {
