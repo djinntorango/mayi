@@ -7,6 +7,7 @@ function Prewrite() {
   const [userInput, setUserInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [topic, setTopic] = useState("");
+  const [debugMessages, setDebugMessages] = useState([]);
 
   const storyQuestions = [
     "Let's write a story today! Who is the main character?",
@@ -17,49 +18,43 @@ function Prewrite() {
     "What important events happen in the middle of the story?",
     "How does the story end?"
   ];
-  
+
+  // Debug helper
+  const addDebug = (message) => {
+    console.log(message);
+    setDebugMessages(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
 
   useEffect(() => {
+    addDebug('Component mounted');
+
     function handleMessage(event) {
-      if (event.data.type === 'SET_TOPIC') {
+      addDebug(`Received message: ${JSON.stringify(event.data)}`);
+      
+      if (event.data.type === 'SET_TOPIC' || event.data.type === 'INIT_DATA') {
+        addDebug(`Setting topic to: ${event.data.topic}`);
         setTopic(event.data.topic);
       }
     }
 
     window.addEventListener('message', handleMessage);
     
-    // Tell Storyline we're ready
+    addDebug('Sending PREWRITE_READY message');
     window.parent.postMessage({ type: 'PREWRITE_READY' }, '*');
 
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
   useEffect(() => {
-    const handleMessage = (event) => {
-      // For debugging
-      console.log('Message received:', event.data);
-      
-      if (event.data.type === 'INIT_DATA') {
-        setTopic(event.data.topic);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  // Set up conversation when topic is received
-  useEffect(() => {
+    addDebug(`Topic changed to: ${topic}`);
     setConversation([
       { sender: 'system', text: topic ? `Your topic is: ${topic}. ` : `Let's write a story! ` },
       { sender: 'system', text: storyQuestions[0] }
     ]);
   }, [topic]);
 
-  // Send story data to Storyline
   const updateStoryline = (responses) => {
     try {
-      // Create story elements object
       const storyElements = {
         character: responses[0]?.answer || '',
         setting: responses[1]?.answer || '',
@@ -71,13 +66,14 @@ function Prewrite() {
         isComplete: responses.length === storyQuestions.length
       };
 
-      // Send to parent (Storyline)
+      addDebug(`Sending story update: ${JSON.stringify(storyElements)}`);
       window.parent.postMessage({
         type: 'STORY_UPDATE',
         storyElements
       }, '*');
 
     } catch (error) {
+      addDebug(`Error updating Storyline: ${error.message}`);
       console.error('Error updating Storyline:', error);
     }
   };
@@ -127,7 +123,7 @@ function Prewrite() {
       return data.text;
 
     } catch (error) {
-      console.error('Error in getAIResponse:', error);
+      addDebug(`Error in AI response: ${error.message}`);
       return "I encountered an error. Let's continue with the next question.";
     }
   };
@@ -137,10 +133,11 @@ function Prewrite() {
     if (userInput.trim() === "" || isLoading) return;
 
     setIsLoading(true);
+    addDebug(`Processing user input: ${userInput}`);
     
     const aiResponse = await getAIResponse(userInput, userResponses);
+    addDebug(`Received AI response: ${aiResponse}`);
     
-    // Parse the AI response
     const feedbackMatch = aiResponse.match(/FEEDBACK:(.*?)(?=ACTION:|$)/s);
     const actionMatch = aiResponse.match(/ACTION:(.*?)$/s);
     
@@ -162,7 +159,6 @@ function Prewrite() {
       }
     ];
 
-    // Handle the next action
     if (action.startsWith('NEXT:')) {
       const nextQuestion = action.replace('NEXT:', '').trim();
       newConversation.push({ sender: 'system', text: nextQuestion });
@@ -170,22 +166,38 @@ function Prewrite() {
       const finalFeedback = action.replace('FINAL:', '').trim();
       newConversation.push({ sender: 'system', text: finalFeedback });
     } else if (action) {
-      // It's a follow-up question
       newConversation.push({ sender: 'system', text: action });
     }
 
     setConversation(newConversation);
     setUserResponses(newUserResponses);
     setUserInput("");
-
-    // Update Storyline
     updateStoryline(newUserResponses);
-
     setIsLoading(false);
   };
 
   return (
     <div className="prewrite-container main-container">
+      {/* Debug Panel */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        right: 0,
+        background: 'rgba(0,0,0,0.8)',
+        color: 'white',
+        padding: '10px',
+        maxHeight: '200px',
+        overflowY: 'auto',
+        fontSize: '12px',
+        zIndex: 9999,
+        width: '300px'
+      }}>
+        <h4 style={{ margin: '0 0 5px 0', color: '#fff' }}>Debug Messages:</h4>
+        {debugMessages.map((msg, i) => (
+          <div key={i} style={{ marginBottom: '3px', borderBottom: '1px solid #333' }}>{msg}</div>
+        ))}
+      </div>
+
       <div className="chat-interface">
         <div className="conversation-box">
           {conversation.map((entry, index) => (
