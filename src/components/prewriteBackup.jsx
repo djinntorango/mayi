@@ -157,142 +157,64 @@
 //   );
 // }
 
-// export default Prewrite;
-import React, { useState, useEffect } from 'react';
-import { getFirestore, doc, setDoc, collection, addDoc } from 'firebase/firestore';
-import '../styles/prewrite.css';
+// src/Prewrite.js
+import React, { useState } from 'react';
+import { useAgent } from './hooks/useAgent';
+import { useConversation } from './hooks/useConversation';
+import { getAIResponse } from './hooks/useAIResponse';
+import { TypingIndicator } from './components/TypingIndicator';
+import { Message } from './components/Message';
+import { ChatInput } from './components/ChatInput';
+import { updateParentResponses } from './utils/responseHandler';
+import './styles/prewrite.css';
 
 function Prewrite() {
-  const [conversation, setConversation] = useState([]);
+  const params = new URLSearchParams(window.location.search);
+  const { agent, topic } = useAgent(params.get('topic'));
+  const { conversation, setConversation, conversationRef } = useConversation(agent, topic);
   const [userResponses, setUserResponses] = useState([]);
   const [userInput, setUserInput] = useState("");
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [sessionId, setSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const firestore = getFirestore();
-
-  const baseQuestions = [
-    "Let's write a story today! Who is the main character?",
-    "Where does the story take place?",
-    "What is the main problem or challenge in the story?",
-    "How is the problem solved?",
-    "What happens at the beginning of the story?",
-    "What important events happen in the middle of the story?",
-    "How does the story end?"
-  ];
-
-  // Initialize conversation with first question
-  useEffect(() => {
-    if (conversation.length === 0) {
-      setConversation([{ sender: 'system', text: baseQuestions[0] }]);
-      initializeSession();
-    }
-  }, []);
-
-  const initializeSession = async () => {
-    try {
-      const sessionsRef = collection(firestore, "story_sessions");
-      const docRef = await addDoc(sessionsRef, {
-        timestamp: new Date(),
-        responses: []
-      });
-      setSessionId(docRef.id);
-    } catch (error) {
-      console.error("Error creating session:", error);
-    }
-  };
-
-  const getAIFeedback = async (question, answer, isLastResponse) => {
-    try {
-      let corePrompt;
-      if (isLastResponse) {
-        corePrompt = "You are providing final feedback on a student's story. Be encouraging but brief.";
-      } else {
-        corePrompt = `You are helping a student develop their story. They are answering the question: "${question}"
-                      If their answer needs more detail or development, ask ONE follow-up question to help them expand.
-                      If their answer is sufficient, respond with exactly: "NEXT_QUESTION"`;
-      }
-  
-      const response = await fetch('https://teacherresponse-co3kwnyxqq-uc.a.run.app/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          corePrompt: corePrompt,
-          prompt: answer
-        })
-      });
-  
-      if (!response.ok) {
-        console.error('API Response not ok:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error details:', errorText);
-        throw new Error(`API returned ${response.status}`);
-      }
-  
-      const data = await response.json();
-      console.log('API Response:', data);
-  
-      // Extract the text response from the API response
-      return data.text || "Let's move to the next question.";
-  
-    } catch (error) {
-      console.error('Error in getAIResponse:', error);
-      return "I encountered an error. Let's continue with the next question.";
-    }
-  };
 
   const handleUserInput = async (e) => {
     e.preventDefault();
-    if (userInput.trim() === "" || isLoading) return;
+    if (!userInput.trim() || isLoading || !agent) return;
 
+    const currentInput = userInput;
+    setUserInput('');
+    setConversation(prev => [...prev, { sender: 'user', text: currentInput }]);
     setIsLoading(true);
-    
-    const currentQuestion = baseQuestions[currentQuestionIndex];
-    const feedback = await getAIFeedback(currentQuestion, userInput);
-    
-    const newConversation = [
-      ...conversation,
-      { sender: 'user', text: userInput },
-    ];
 
-    if (feedback) {
-      newConversation.push({ sender: 'system', text: feedback });
-    }
+    const result = await getAIResponse(agent, currentInput, userResponses);
 
-    if (currentQuestionIndex + 1 < baseQuestions.length) {
-      newConversation.push({ 
-        sender: 'system', 
-        text: baseQuestions[currentQuestionIndex + 1] 
-      });
-    }
+    setConversation(prev => [...prev, { sender: 'system', text: result.response.feedback }]);
 
-    const newUserResponses = [
-      ...userResponses,
-      { 
-        question: currentQuestion, 
-        answer: userInput,
-        feedback: feedback 
+    if (result.decision.action === 'next' || result.decision.action === 'complete') {
+      const newUserResponses = [...userResponses, {
+        question: agent.getCurrentQuestion(),
+        answer: currentInput,
+        feedback: result.response.feedback
+      }];
+      setUserResponses(newUserResponses);
+
+      if (result.decision.action === 'next') {
+        agent.currentQuestionIndex++;
+        setConversation(prev => [...prev, { 
+          sender: 'system', 
+          text: agent.getCurrentQuestion()
+        }]);
+        setUserInput(agent.getCurrentFrame());
       }
-    ];
 
-    setConversation(newConversation);
-    setUserResponses(newUserResponses);
-    setUserInput("");
-    setCurrentQuestionIndex(currentQuestionIndex + 1);
-
-    // Save to Firestore
-    if (sessionId) {
-      try {
-        const sessionRef = doc(firestore, "story_sessions", sessionId);
-        await setDoc(sessionRef, {
-          timestamp: new Date(),
-          responses: newUserResponses
-        }, { merge: true });
-      } catch (error) {
-        console.error("Error saving responses:", error);
+      updateParentResponses(newUserResponses);
+    } else if (result.decision.action === 'elaborate') {
+      if (result.response.followUp) {
+        setConversation(prev => [...prev, { 
+          sender: 'system', 
+          text: result.response.followUp 
+        }]);
       }
+      setUserInput(agent.getCurrentFrame());
     }
 
     setIsLoading(false);
@@ -301,37 +223,24 @@ function Prewrite() {
   return (
     <div className="prewrite-container main-container">
       <div className="chat-interface">
-        <div className="conversation-box">
+        <div className="conversation-box" ref={conversationRef}>
           {conversation.map((entry, index) => (
-            <div key={index} className={`message ${entry.sender}`}>
-              <div className="sender">
-                {entry.sender === 'user' ? 'You' : 'Teacher'}
-              </div>
-              <div className="content">
-                {entry.text}
-              </div>
-            </div>
+            <Message key={index} sender={entry.sender} text={entry.text} />
           ))}
           {isLoading && (
             <div className="message system">
               <div className="content">
-                <span className="loading">Thinking...</span>
+                <TypingIndicator />
               </div>
             </div>
           )}
         </div>
-        <form className="input-box" onSubmit={handleUserInput}>
-          <input
-            type="text"
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Type your answer..."
-            disabled={isLoading}
-          />
-          <button type="submit" disabled={isLoading}>
-            {isLoading ? "Sending..." : "Send"}
-          </button>
-        </form>
+        <ChatInput
+          userInput={userInput}
+          setUserInput={setUserInput}
+          handleSubmit={handleUserInput}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   );
