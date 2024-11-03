@@ -24,6 +24,16 @@ function Prewrite() {
     setDebugMessages(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
   };
 
+  useEffect(() => {
+    addDebug('Component mounted, checking URL parameters');
+    const params = new URLSearchParams(window.location.search);
+    const topicFromUrl = params.get('topic');
+    addDebug(`Found topic in URL: ${topicFromUrl}`);
+    if (topicFromUrl) {
+      setTopic(decodeURIComponent(topicFromUrl));
+    }
+  }, []);
+
   // Check for topic when component mounts
   useEffect(() => {
     addDebug('Component mounted');
