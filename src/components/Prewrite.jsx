@@ -24,6 +24,7 @@ function Prewrite() {
     setDebugMessages(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
   };
 
+  // Get topic from URL parameters
   useEffect(() => {
     addDebug('Component mounted, checking URL parameters');
     const params = new URLSearchParams(window.location.search);
@@ -34,54 +35,7 @@ function Prewrite() {
     }
   }, []);
 
-  // Check for topic when component mounts
-  useEffect(() => {
-    addDebug('Component mounted');
-
-    // Function to check for topic
-    const checkForTopic = () => {
-      addDebug('Checking for storylineTopic...');
-      // Check if we can access window.parent
-      try {
-        if (window.parent && window.parent.storylineTopic !== undefined) {
-          addDebug(`Found topic in parent: ${window.parent.storylineTopic}`);
-          setTopic(window.parent.storylineTopic);
-          return true;
-        }
-      } catch (e) {
-        addDebug(`Error accessing parent: ${e.message}`);
-      }
-
-      // Check current window
-      if (window.storylineTopic !== undefined) {
-        addDebug(`Found topic in window: ${window.storylineTopic}`);
-        setTopic(window.storylineTopic);
-        return true;
-      }
-
-      addDebug('Topic not found');
-      return false;
-    };
-
-    // Try immediately
-    if (!checkForTopic()) {
-      // If not found, start polling
-      addDebug('Starting topic polling');
-      const pollInterval = setInterval(() => {
-        if (checkForTopic()) {
-          addDebug('Topic found, stopping polling');
-          clearInterval(pollInterval);
-        }
-      }, 500); // Check every 500ms
-
-      // Stop polling after 10 seconds
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        addDebug('Polling timeout reached');
-      }, 10000);
-    }
-  }, []);
-
+  // Set up conversation when topic changes
   useEffect(() => {
     addDebug(`Topic changed to: ${topic}`);
     setConversation([
