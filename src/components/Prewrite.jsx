@@ -1,106 +1,50 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../styles/prewrite.css';
 
-// Agent class to handle conversation state and decision making
 class LearningAgent {
   constructor(topic) {
     this.topic = topic;
-    this.state = {
-      currentQuestionIndex: 0,
-      attemptsPerQuestion: {},
-      lastResponse: null
-    };
-    
-    this.goals = {
-      maxAttempts: 2  // Reduced max attempts since responses are simple
-    };
+    this.currentQuestionIndex = 0;
+    this.questions = [
+      `Where do ${topic} live?`,
+      `What do ${topic} need to survive?`,
+      `What's something else ${topic} needs?`
+    ];
+    this.frames = [
+      `${topic} lives in...`,
+      `To survive, ${topic} needs...`,
+      `Another thing ${topic} needs is...`
+    ];
+  }
+
+  getCurrentQuestion() {
+    return this.questions[this.currentQuestionIndex];
+  }
+
+  getCurrentFrame() {
+    return this.frames[this.currentQuestionIndex];
   }
 
   generatePrompt(userAnswer, previousResponses) {
+    const isLastQuestion = this.currentQuestionIndex === this.questions.length - 1;
+
     return `You are a teaching assistant helping a student learn about ${this.topic}.
 
 Current question: "${this.getCurrentQuestion()}"
 Expected frame: "${this.getCurrentFrame()}"
 Student's answer: "${userAnswer}"
 
+IMPORTANT INSTRUCTIONS:
+1. Evaluate student's answer and choose ONE action:
+   - "next" if answer uses sentence frame AND is relevant
+   - "elaborate" if answer needs improvement
+   - "complete" if good answer AND this is the final question
+
+2. Current question number: ${this.currentQuestionIndex + 1} of ${this.questions.length}
+${isLastQuestion ? '(This is the final question)' : ''}
+
 Previous responses:
-${previousResponses.map(r => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n')}
-
-Evaluate if:
-1. The student used the sentence frame
-2. The answer is relevant to the question
-3. The answer makes sense for ${this.topic}
-
-Remember:
-- Move to next question if they used the frame AND answer is relevant
-- Only ask for clarification if answer is off-topic or doesn't use the frame
-- Use "complete" action for the final question
-- Keep feedback very brief and encouraging
-
-Required format:
-- Use "next" action to move to next question
-- Use "elaborate" action to ask for better answer
-- Use "complete" action for final question`;
-  }
-
-  processLLMResponse(llmResponse) {
-    try {
-      const response = JSON.parse(llmResponse);
-      this.lastResponse = response;
-      
-      // Update attempt counter
-      const currentAttempts = this.state.attemptsPerQuestion[this.state.currentQuestionIndex] || 0;
-      this.state.attemptsPerQuestion[this.state.currentQuestionIndex] = currentAttempts + 1;
-
-      // Override LLM decision if max attempts reached
-      if (currentAttempts >= this.goals.maxAttempts && response.decision.action === 'elaborate') {
-        response.decision.action = 'next';
-        response.decision.reason = 'Max attempts reached';
-        response.response.feedback = "Let's try the next question!";
-      }
-
-      // Update question index if moving forward
-      if (response.decision.action === 'next') {
-        this.state.currentQuestionIndex++;
-      }
-
-      return response;
-    } catch (error) {
-      console.error('Error processing LLM response:', error);
-      return {
-        analysis: {
-          score: 0,
-          isRelevant: false,
-          completesFrame: false
-        },
-        decision: {
-          action: 'elaborate',
-          reason: 'Error processing response'
-        },
-        response: {
-          feedback: "Let's try again!",
-          followUp: null
-        }
-      };
-    }
-  }
-
-  getCurrentQuestion() {
-    const questions = [
-      `Where do ${this.topic} live?`,
-      `What do ${this.topic} need to survive?`,
-      `What's something else ${this.topic} needs?`
-    ];
-    return questions[this.state.currentQuestionIndex];
-  }
-
-  getCurrentFrame() {
-    const frames = [
-      `${this.topic} lives in...`,
-      `To survive, ${this.topic} needs...`,
-      `Another thing ${this.topic} needs is...`
-    ];
-    return frames[this.state.currentQuestionIndex];
+${previousResponses.map(r => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n')}`;
   }
 }
 
@@ -119,6 +63,14 @@ function Prewrite() {
   const [userInput, setUserInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [topic, setTopic] = useState("");
+  
+  const conversationRef = useRef(null);
+
+  useEffect(() => {
+    if (conversationRef.current) {
+      conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+    }
+  }, [conversation]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -151,20 +103,66 @@ function Prewrite() {
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`API returned ${response.status}`);
       const data = await response.json();
       return data.text;
-
     } catch (error) {
+      console.error('API Error:', error);
       return JSON.stringify({
-        analysis: { score: 0, strengths: [], weaknesses: [], hasEvidence: false },
-        decision: { action: 'next', reason: 'Error occurred' },
-        response: { feedback: "I encountered an error. Let's continue.", followUp: null }
+        analysis: { score: 0.5, isRelevant: true, completesFrame: false },
+        decision: { action: 'elaborate', reason: 'Error occurred' },
+        response: { feedback: "Let's try that again!", followUp: null }
       });
     }
+  };
+
+  const handleUserInput = async (e) => {
+    e.preventDefault();
+    if (!userInput.trim() || isLoading || !agent) return;
+
+    const currentInput = userInput;
+    setUserInput('');
+    setConversation(prev => [...prev, { sender: 'user', text: currentInput }]);
+    setIsLoading(true);
+
+    const llmResponse = await getAIResponse(currentInput, userResponses);
+    const result = JSON.parse(llmResponse);
+
+    // Add the AI's feedback
+    setConversation(prev => [...prev, { sender: 'system', text: result.response.feedback }]);
+
+    if (result.decision.action === 'next' || result.decision.action === 'complete') {
+      // Store the response
+      const newUserResponses = [...userResponses, {
+        question: agent.getCurrentQuestion(),
+        answer: currentInput,
+        feedback: result.response.feedback
+      }];
+      setUserResponses(newUserResponses);
+
+      // Move to next question if not complete
+      if (result.decision.action === 'next') {
+        agent.currentQuestionIndex++;
+        setConversation(prev => [...prev, { 
+          sender: 'system', 
+          text: agent.getCurrentQuestion()
+        }]);
+        setUserInput(agent.getCurrentFrame());
+      }
+
+      // Update parent
+      updateResponses(newUserResponses);
+    } else if (result.decision.action === 'elaborate') {
+      if (result.response.followUp) {
+        setConversation(prev => [...prev, { 
+          sender: 'system', 
+          text: result.response.followUp 
+        }]);
+      }
+      setUserInput(agent.getCurrentFrame());
+    }
+
+    setIsLoading(false);
   };
 
   const updateResponses = (responses) => {
@@ -180,60 +178,15 @@ function Prewrite() {
         type: 'HABITAT_UPDATE',
         habitatElements
       }, '*');
-
     } catch (error) {
       console.error('Error updating responses:', error);
     }
   };
 
-  const handleUserInput = async (e) => {
-    e.preventDefault();
-    if (!userInput.trim() || isLoading || !agent) return;
-
-    const currentInput = userInput;
-    setUserInput(''); // Clear input immediately
-    setConversation(prev => [...prev, { sender: 'user', text: currentInput }]);
-    setIsLoading(true);
-    
-    const llmResponse = await getAIResponse(currentInput, userResponses);
-    const result = agent.processLLMResponse(llmResponse);
-    
-    setConversation(prev => [
-      ...prev,
-      { sender: 'system', text: result.response.feedback },
-      ...(result.decision.action === 'elaborate' && result.response.followUp 
-        ? [{ sender: 'system', text: result.response.followUp }] 
-        : []),
-      ...(result.decision.action === 'next'
-        ? [{ sender: 'system', text: agent.getCurrentQuestion() }]
-        : [])
-    ]);
-
-    if (result.decision.action === 'next') {
-      setUserInput(agent.getCurrentFrame());
-    } else if (result.decision.action === 'complete') {
-      setUserInput('');
-    }
-
-    const newUserResponses = [
-      ...userResponses,
-      {
-        question: agent.getCurrentQuestion(),
-        answer: currentInput,
-        feedback: result.response.feedback,
-        analysis: result.analysis
-      }
-    ];
-
-    setUserResponses(newUserResponses);
-    updateResponses(newUserResponses);
-    setIsLoading(false);
-  };
-
   return (
     <div className="prewrite-container main-container">
       <div className="chat-interface">
-        <div className="conversation-box">
+        <div className="conversation-box" ref={conversationRef}>
           {conversation.map((entry, index) => (
             <div key={index} className={`message ${entry.sender}`}>
               <div className="sender">
