@@ -7,6 +7,12 @@ function Prewrite() {
   const [userInput, setUserInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [topic, setTopic] = useState("");
+  const [debug, setDebug] = useState([]); // Add debug state
+
+  // Debug helper
+  const addDebug = (msg) => {
+    setDebug(prev => [...prev, `${new Date().toISOString()}: ${msg}`]);
+  };
 
   const storyQuestions = [
     "Let's write a story today! Who is the main character?",
@@ -18,6 +24,23 @@ function Prewrite() {
     "How does the story end?"
   ];
   
+  useEffect(() => {
+    function handleMessage(event) {
+      addDebug(`Message received: ${JSON.stringify(event.data)}`);
+      if (event.data.type === 'SET_TOPIC') {
+        addDebug(`Setting topic to: ${event.data.topic}`);
+        setTopic(event.data.topic);
+      }
+    }
+
+    window.addEventListener('message', handleMessage);
+    
+    // Tell Storyline we're ready
+    addDebug('Sending PREWRITE_READY');
+    window.parent.postMessage({ type: 'PREWRITE_READY' }, '*');
+
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   useEffect(() => {
     function handleMessage(event) {
@@ -214,6 +237,9 @@ function Prewrite() {
           </button>
         </form>
       </div>
+      {debug.map((msg, i) => (
+          <div key={i}>{msg}</div>
+        ))}
     </div>
   );
 }
