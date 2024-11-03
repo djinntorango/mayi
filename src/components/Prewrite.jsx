@@ -9,10 +9,19 @@ function Prewrite() {
   const [topic, setTopic] = useState("");
 
   const generateQuestions = (topic) => [
-    `Where does/do ${topic} live?`,
+    `Where does ${topic} live?`,
     `What does ${topic} need to survive?`,
     `What's something else ${topic} needs?`
   ];
+
+  const getSentenceFrame = (questionIndex, topic) => {
+    const frames = [
+      `${topic} lives in...`,
+      `To survive, ${topic} needs...`,
+      `Another thing ${topic} needs is...`
+    ];
+    return frames[questionIndex] || '';
+  };
 
   // Get topic from URL parameters
   useEffect(() => {
@@ -30,6 +39,8 @@ function Prewrite() {
         { sender: 'system', text: `Let's learn about ${topic}!` },
         { sender: 'system', text: generateQuestions(topic)[0] }
       ]);
+      // Set initial sentence frame
+      setUserInput(getSentenceFrame(0, topic));
     }
   }, [topic]);
 
@@ -132,16 +143,18 @@ function Prewrite() {
     if (action.startsWith('NEXT:')) {
       const nextQuestion = action.replace('NEXT:', '').trim();
       newConversation.push({ sender: 'system', text: nextQuestion });
+      // Set sentence frame for next question
+      setUserInput(getSentenceFrame(newUserResponses.length, topic));
     } else if (action.startsWith('FINAL:')) {
       const finalFeedback = action.replace('FINAL:', '').trim();
       newConversation.push({ sender: 'system', text: finalFeedback });
+      setUserInput(""); // Clear input on final question
     } else if (action) {
       newConversation.push({ sender: 'system', text: action });
     }
 
     setConversation(newConversation);
     setUserResponses(newUserResponses);
-    setUserInput("");
     updateResponses(newUserResponses);
     setIsLoading(false);
   };
