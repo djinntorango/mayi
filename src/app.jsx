@@ -64,6 +64,7 @@ import { FullPageSkeletonLoader } from './components/SkeletonLoader';
 import Dashboard from './components/Dashboard';
 import AuthPage from './components/AuthPage';
 import Prewrite from './components/Prewrite';
+import Write from './components/Write';
 import { auth } from './firebase';
 import './styles/app.css';
 
@@ -73,6 +74,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/prewrite" element={<Prewrite />} />
+          <Route path="/write" element={<Write />} />
         </Routes>
       </Router>
     );
