@@ -6,6 +6,7 @@ function Prewrite() {
   const [userResponses, setUserResponses] = useState([]);
   const [userInput, setUserInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [topic, setTopic] = useState("");
 
   const storyQuestions = [
     "Let's write a story today! Who is the main character?",
@@ -18,12 +19,30 @@ function Prewrite() {
   ];
   
 
-  // Initialize conversation with first question
+  useEffect(() => {
+    function handleMessage(event) {
+      if (event.data.type === 'SET_TOPIC') {
+        setTopic(event.data.topic);
+      }
+    }
+
+    window.addEventListener('message', handleMessage);
+    
+    // Tell Storyline we're ready
+    window.parent.postMessage({ type: 'PREWRITE_READY' }, '*');
+
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Initialize conversation
   useEffect(() => {
     if (conversation.length === 0) {
-      setConversation([{ sender: 'system', text: storyQuestions[0] }]);
+      setConversation([
+        { sender: 'system', text: topic ? `Your topic is: ${topic}` : '' },
+        { sender: 'system', text: storyQuestions[0] }
+      ].filter(msg => msg.text)); 
     }
-  }, []);
+  }, [topic]); 
 
   // Send story data to Storyline
   const updateStoryline = (responses) => {
