@@ -19,7 +19,6 @@ function Prewrite() {
     "How does the story end?"
   ];
 
-  // Debug helper
   const addDebug = (message) => {
     console.log(message);
     setDebugMessages(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
@@ -27,23 +26,42 @@ function Prewrite() {
 
   useEffect(() => {
     addDebug('Component mounted');
+    
+    // Try to detect if we're in Storyline
+    try {
+      addDebug('Checking for Storyline environment...');
+      if (window.parent && window.parent.GetPlayer) {
+        addDebug('Found Storyline GetPlayer');
+        const player = window.parent.GetPlayer();
+        const topicFromStoryline = player.GetVar('topic');
+        addDebug(`Got topic directly from Storyline: ${topicFromStoryline}`);
+        setTopic(topicFromStoryline);
+      } else if (window.GetPlayer) {
+        addDebug('Found GetPlayer in current window');
+        const player = window.GetPlayer();
+        const topicFromStoryline = player.GetVar('topic');
+        addDebug(`Got topic from current window: ${topicFromStoryline}`);
+        setTopic(topicFromStoryline);
+      } else {
+        addDebug('Could not find Storyline player');
+      }
+    } catch (error) {
+      addDebug(`Error accessing Storyline: ${error.message}`);
+    }
 
+    // Keep the message listener just in case
     function handleMessage(event) {
       addDebug(`Received message: ${JSON.stringify(event.data)}`);
-      
       if (event.data.type === 'SET_TOPIC' || event.data.type === 'INIT_DATA') {
-        addDebug(`Setting topic to: ${event.data.topic}`);
+        addDebug(`Setting topic from message: ${event.data.topic}`);
         setTopic(event.data.topic);
       }
     }
 
     window.addEventListener('message', handleMessage);
-    
-    addDebug('Sending PREWRITE_READY message');
-    window.parent.postMessage({ type: 'PREWRITE_READY' }, '*');
-
     return () => window.removeEventListener('message', handleMessage);
   }, []);
+
 
   useEffect(() => {
     addDebug(`Topic changed to: ${topic}`);
