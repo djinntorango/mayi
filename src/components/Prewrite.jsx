@@ -7,12 +7,6 @@ function Prewrite() {
   const [userInput, setUserInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [topic, setTopic] = useState("");
-  const [debug, setDebug] = useState([]); // Add debug state
-
-  // Debug helper
-  const addDebug = (msg) => {
-    setDebug(prev => [...prev, `${new Date().toISOString()}: ${msg}`]);
-  };
 
   const storyQuestions = [
     "Let's write a story today! Who is the main character?",
@@ -24,23 +18,6 @@ function Prewrite() {
     "How does the story end?"
   ];
   
-  useEffect(() => {
-    function handleMessage(event) {
-      addDebug(`Message received: ${JSON.stringify(event.data)}`);
-      if (event.data.type === 'SET_TOPIC') {
-        addDebug(`Setting topic to: ${event.data.topic}`);
-        setTopic(event.data.topic);
-      }
-    }
-
-    window.addEventListener('message', handleMessage);
-    
-    // Tell Storyline we're ready
-    addDebug('Sending PREWRITE_READY');
-    window.parent.postMessage({ type: 'PREWRITE_READY' }, '*');
-
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
 
   useEffect(() => {
     function handleMessage(event) {
@@ -59,20 +36,49 @@ function Prewrite() {
 
   // Initialize conversation
   useEffect(() => {
-    // Always start a new conversation when topic changes
-    setConversation([
-      // Always show first message with topic (or without if none)
-      { sender: 'system', text: topic ? `Your topic is: ${topic}. ` : `Let's write a story! ` },
-      // Always show first question
-      { sender: 'system', text: storyQuestions[0] }
-    ]);
-  }, [topic]); // Re-run when topic changes
+    try {
+      // Create a debug element
+      const debugDiv = document.createElement('div');
+      debugDiv.style.position = 'fixed';
+      debugDiv.style.top = '0';
+      debugDiv.style.right = '0';
+      debugDiv.style.background = '#000';
+      debugDiv.style.color = '#fff';
+      debugDiv.style.padding = '10px';
+      debugDiv.style.zIndex = '9999';
+      document.body.appendChild(debugDiv);
   
-  // Add some console logs to debug
-  useEffect(() => {
-    console.log('Current topic:', topic);
-    console.log('Current conversation:', conversation);
-  }, [topic, conversation]);
+      // Try to get topic
+      const player = window.parent.GetPlayer();
+      debugDiv.textContent = 'Got player';
+      const topic = player.GetVar("topic");
+      debugDiv.textContent = `Got topic: ${topic}`;
+      
+      // Set initial conversation
+      setConversation([
+        { sender: 'system', text: topic ? `Your topic is: ${topic}. ` : `Let's write a story! ` },
+        { sender: 'system', text: storyQuestions[0] }
+      ]);
+      
+    } catch (error) {
+      // Show error in debug div
+      const debugDiv = document.createElement('div');
+      debugDiv.style.position = 'fixed';
+      debugDiv.style.top = '0';
+      debugDiv.style.right = '0';
+      debugDiv.style.background = '#f00';
+      debugDiv.style.color = '#fff';
+      debugDiv.style.padding = '10px';
+      debugDiv.style.zIndex = '9999';
+      debugDiv.textContent = `Error: ${error.message}`;
+      document.body.appendChild(debugDiv);
+      
+      // Fallback to just showing first question
+      setConversation([
+        { sender: 'system', text: storyQuestions[0] }
+      ]);
+    }
+  }, []);
 
   // Send story data to Storyline
   const updateStoryline = (responses) => {
@@ -237,9 +243,6 @@ function Prewrite() {
           </button>
         </form>
       </div>
-      {debug.map((msg, i) => (
-          <div key={i}>{msg}</div>
-        ))}
     </div>
   );
 }
