@@ -98,6 +98,14 @@ Remember:
   }
 }
 
+const TypingIndicator = () => (
+  <div className="typing-indicator">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+);
+
 function Prewrite() {
   const [agent, setAgent] = useState(null);
   const [conversation, setConversation] = useState([]);
@@ -176,21 +184,26 @@ function Prewrite() {
     e.preventDefault();
     if (!userInput.trim() || isLoading || !agent) return;
 
+    const currentInput = userInput;
+    setUserInput(''); // Clear input immediately
+    setConversation(prev => [...prev, { sender: 'user', text: currentInput }]);
     setIsLoading(true);
     
-    const llmResponse = await getAIResponse(userInput, userResponses);
+    const llmResponse = await getAIResponse(currentInput, userResponses);
     const result = agent.processLLMResponse(llmResponse);
     
-    const newConversation = [
-      ...conversation,
-      { sender: 'user', text: userInput },
-      { sender: 'system', text: result.response.feedback }
-    ];
+    setConversation(prev => [
+      ...prev,
+      { sender: 'system', text: result.response.feedback },
+      ...(result.decision.action === 'elaborate' && result.response.followUp 
+        ? [{ sender: 'system', text: result.response.followUp }] 
+        : []),
+      ...(result.decision.action === 'next'
+        ? [{ sender: 'system', text: agent.getCurrentQuestion() }]
+        : [])
+    ]);
 
-    if (result.decision.action === 'elaborate' && result.response.followUp) {
-      newConversation.push({ sender: 'system', text: result.response.followUp });
-    } else if (result.decision.action === 'next') {
-      newConversation.push({ sender: 'system', text: agent.getCurrentQuestion() });
+    if (result.decision.action === 'next') {
       setUserInput(agent.getCurrentFrame());
     } else if (result.decision.action === 'complete') {
       setUserInput('');
@@ -200,13 +213,12 @@ function Prewrite() {
       ...userResponses,
       {
         question: agent.getCurrentQuestion(),
-        answer: userInput,
+        answer: currentInput,
         feedback: result.response.feedback,
         analysis: result.analysis
       }
     ];
 
-    setConversation(newConversation);
     setUserResponses(newUserResponses);
     updateResponses(newUserResponses);
     setIsLoading(false);
@@ -229,7 +241,7 @@ function Prewrite() {
           {isLoading && (
             <div className="message system">
               <div className="content">
-                <span className="loading">Thinking...</span>
+                <TypingIndicator />
               </div>
             </div>
           )}
@@ -243,7 +255,7 @@ function Prewrite() {
             disabled={isLoading}
           />
           <button type="submit" disabled={isLoading}>
-            {isLoading ? "Sending..." : "Send"}
+            Send
           </button>
         </form>
       </div>
