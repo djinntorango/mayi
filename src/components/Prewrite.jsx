@@ -114,6 +114,15 @@ function Prewrite() {
   const [isLoading, setIsLoading] = useState(false);
   const [topic, setTopic] = useState("");
 
+  const conversationBoxRef = useRef(null);
+
+  // Auto-scroll effect
+  useEffect(() => {
+    if (conversationBoxRef.current) {
+      conversationBoxRef.current.scrollTop = conversationBoxRef.current.scrollHeight;
+    }
+  }, [conversation, isLoading]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const topicFromUrl = params.get('topic');
@@ -227,7 +236,7 @@ function Prewrite() {
   return (
     <div className="prewrite-container main-container">
       <div className="chat-interface">
-        <div className="conversation-box">
+        <div className="conversation-box" ref={conversationBoxRef}>
           {conversation.map((entry, index) => (
             <div key={index} className={`message ${entry.sender}`}>
               <div className="sender">
@@ -259,7 +268,7 @@ function Prewrite() {
           </button>
         </form>
       </div>
-    </div>
+      </div>
   );
 }
 
