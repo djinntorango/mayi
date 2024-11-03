@@ -7,7 +7,7 @@ import { TypingIndicator } from './components/TypingIndicator';
 import { Message } from './components/Message';
 import { ChatInput } from './components/ChatInput';
 import { updateParentResponses } from './utils/responseHandler';
-import './styles/prewrite.css';
+import '../styles/prewrite.css';
 
 function Prewrite() {
   const params = new URLSearchParams(window.location.search);

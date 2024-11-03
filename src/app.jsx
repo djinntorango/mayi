@@ -63,7 +63,7 @@ import Sidebar from './components/Sidebar';
 import { FullPageSkeletonLoader } from './components/SkeletonLoader';
 import Dashboard from './components/Dashboard';
 import AuthPage from './components/AuthPage';
-import Prewrite from './components/Prewrite';
+import Prewrite from './components/prewrite/Prewrite';
 import Write from './components/Write';
 import { auth } from './firebase';
 import './styles/app.css';
