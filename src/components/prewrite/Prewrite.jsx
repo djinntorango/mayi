@@ -19,9 +19,10 @@ function Prewrite() {
   // Set initial sentence frame when agent is ready
   useEffect(() => {
     if (agent) {
+      console.log('Setting initial frame:', agent.getCurrentFrame()); // Debug log
       setUserInput(agent.getCurrentFrame());
     }
-  }, [agent]);
+  }, [agent, conversation]);
 
   const handleUserInput = async (e) => {
     e.preventDefault();
