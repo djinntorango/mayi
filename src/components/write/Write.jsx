@@ -76,9 +76,6 @@ function WritingEditor() {
     <div className="writing-editor-container">
       <div className="editor-header">
         <h1>Let's Write About {topic}!</h1>
-        <p className="writing-prompt">
-          Use your imagination to tell an amazing story about {topic}!
-        </p>
       </div>
       <div className="editor-wrapper">
         <ReactQuill
