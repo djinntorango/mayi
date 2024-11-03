@@ -8,76 +8,40 @@ class LearningAgent {
     this.state = {
       currentQuestionIndex: 0,
       attemptsPerQuestion: {},
-      memory: [], // Store important context/patterns
+      lastResponse: null
     };
     
     this.goals = {
-      minAnswerQuality: 0.7,    // Threshold for accepting an answer
-      maxAttempts: 3,           // Max attempts per question
-      requireEvidence: true,    // Student should provide specific examples/details
+      maxAttempts: 2  // Reduced max attempts since responses are simple
     };
   }
 
-  // Generate a context-aware prompt for the LLM
   generatePrompt(userAnswer, previousResponses) {
-    return `You are an intelligent teaching agent helping a student learn about ${this.topic}'s habitat and needs.
+    return `You are a teaching assistant helping a student learn about ${this.topic}.
 
-CONTEXT:
-- Current question index: ${this.state.currentQuestionIndex}
-- Attempts on this question: ${this.state.attemptsPerQuestion[this.state.currentQuestionIndex] || 0}
-- Previous responses: ${JSON.stringify(previousResponses)}
-- Student memory: ${JSON.stringify(this.memory)}
+Current question: "${this.getCurrentQuestion()}"
+Expected frame: "${this.getCurrentFrame()}"
+Student's answer: "${userAnswer}"
 
-GOALS:
-1. Ensure student provides specific, detailed answers
-2. Look for evidence and examples in their responses
-3. Help students elaborate if answers are too vague
-4. Move to next question only when answer is sufficient
-5. Maintain encouraging, supportive tone
-
-CURRENT STATE:
 Previous responses:
 ${previousResponses.map(r => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n')}
 
-Current question: "${this.getCurrentQuestion()}"
-Student's answer: "${userAnswer}"
+Evaluate if:
+1. The student used the sentence frame
+2. The answer is relevant to the question
+3. The answer makes sense for ${this.topic}
 
-INSTRUCTIONS:
-1. Analyze the response quality (0-1)
-2. Determine if the answer needs elaboration
-3. Decide appropriate next action
-
-Respond in JSON format:
-{
-  "analysis": {
-    "score": <number 0-1>,
-    "strengths": [],
-    "weaknesses": [],
-    "hasEvidence": <boolean>
-  },
-  "decision": {
-    "action": "elaborate" | "next" | "complete",
-    "reason": <string>
-  },
-  "response": {
-    "feedback": <string>,
-    "followUp": <string or null>
-  }
-}`;
+Remember:
+- Answers should be simple, like "Butterflies live in forests"
+- Only ask for clarification if the answer is off-topic or doesn't use the frame
+- Keep feedback very brief and encouraging`;
   }
 
-  // Process LLM response and update agent state
   processLLMResponse(llmResponse) {
     try {
       const response = JSON.parse(llmResponse);
+      this.lastResponse = response;
       
-      // Update agent memory with insights
-      this.memory.push({
-        questionIndex: this.state.currentQuestionIndex,
-        score: response.analysis.score,
-        patterns: response.analysis.strengths.concat(response.analysis.weaknesses)
-      });
-
       // Update attempt counter
       const currentAttempts = this.state.attemptsPerQuestion[this.state.currentQuestionIndex] || 0;
       this.state.attemptsPerQuestion[this.state.currentQuestionIndex] = currentAttempts + 1;
@@ -86,7 +50,7 @@ Respond in JSON format:
       if (currentAttempts >= this.goals.maxAttempts && response.decision.action === 'elaborate') {
         response.decision.action = 'next';
         response.decision.reason = 'Max attempts reached';
-        response.response.feedback += " Let's move on to the next question.";
+        response.response.feedback = "Let's try the next question!";
       }
 
       // Update question index if moving forward
@@ -97,7 +61,21 @@ Respond in JSON format:
       return response;
     } catch (error) {
       console.error('Error processing LLM response:', error);
-      return null;
+      return {
+        analysis: {
+          score: 0,
+          isRelevant: false,
+          completesFrame: false
+        },
+        decision: {
+          action: 'elaborate',
+          reason: 'Error processing response'
+        },
+        response: {
+          feedback: "Let's try again!",
+          followUp: null
+        }
+      };
     }
   }
 

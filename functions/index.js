@@ -163,36 +163,42 @@ exports.prewriteResponse = onRequest({ cors: true, secrets: [openAI, awsAccessKe
         return res.status(400).json({ error: 'Prompt is required.' });
       }
 
-      const systemPrompt = `Respond as a helpful teacher named Kara. Your audience is around 8 years old. Keep responses concise, around 1-2 sentences.
-      You are a friendly writing teacher assistant for young students. Your purpose is to help students prewrite by asking them a series of questions and eliciting an answer.
-      If students make mistakes in their answers, including spelling and relevancy mistakes, your role is to help fix them.
-This is their question:
-${corePrompt}
+      const systemPrompt = `You are an AI teaching assistant helping young students (around 8 years old) learn about different topics. 
+      You must respond in valid JSON format following this exact structure:
+      {
+        "analysis": {
+          "score": <number between 0 and 1>,
+          "isRelevant": <boolean>,
+          "completesFrame": <boolean>
+        },
+        "decision": {
+          "action": <string: either "elaborate", "next", or "complete">,
+          "reason": <string explaining the decision>
+        },
+        "response": {
+          "feedback": <string: 1 encouraging sentence>,
+          "followUp": <string or null: a simple follow-up question if needed>
+        }
+      }
 
-Important guidelines:
-1. Keep responses clear, simple, and encouraging - remember you're talking to young students
-2. Use age-appropriate examples and explanations
-3. For grammar or writing rules, provide simple examples to illustrate
-4. When giving feedback, always start with something positive
+      Guidelines:
+      1. Expect simple, one-sentence answers
+      2. Score responses based on:
+         - Uses the sentence frame (0.5)
+         - Answer is relevant to the question (0.5)
+      3. Choose "elaborate" if:
+         - Answer doesn't use the sentence frame
+         - Answer is completely off-topic
+      4. Choose "next" if:
+         - Answer uses the frame and is relevant
+         - This isn't the final question
+      5. Choose "complete" if:
+         - Answer is acceptable and this is the final question
+      6. Keep feedback very simple and encouraging
+      7. Follow-up questions should only ask for basic clarification
 
-If a student asks about topics unrelated to writing, language arts, or the current lesson, respond politely by returning them to the question they are supposed to answer.
-
-Examples of appropriate questions you can answer:
-- "How do I start my story?"
-- "What is a verb?"
-- "How do I spell 'because'?"
-- "What goes at the end of a question?"
-- "How can I make my writing better?"
-
-Examples of questions you should redirect:
-- "What's the capital of France?"
-- "How do I solve math problems?"
-- "What's the weather like?"
-
-Remember: Always maintain an encouraging, patient tone appropriate for young learners.
-      `;
-
-      console.log(systemPrompt);
+      Context from agent:
+      ${corePrompt}`;
 
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
@@ -203,6 +209,7 @@ Remember: Always maintain an encouraging, patient tone appropriate for young lea
             { role: 'user', content: prompt }
           ],
           temperature: 0.7,
+          response_format: { type: "json_object" }
         },
         {
           headers: {
@@ -212,29 +219,68 @@ Remember: Always maintain an encouraging, patient tone appropriate for young lea
         }
       );
 
-      const textResponse = response.data.choices[0].message.content;
+      const jsonResponse = response.data.choices[0].message.content;
 
-      // Generate TTS using Amazon Polly
+      // Validate JSON structure
+      try {
+        JSON.parse(jsonResponse);
+      } catch (e) {
+        const fallbackResponse = {
+          analysis: {
+            score: 0.5,
+            isRelevant: true,
+            completesFrame: false
+          },
+          decision: {
+            action: "elaborate",
+            reason: "Please use the sentence starter"
+          },
+          response: {
+            feedback: "Good try! Let's use the sentence starter.",
+            followUp: null
+          }
+        };
+        return res.json({ text: JSON.stringify(fallbackResponse) });
+      }
+
+      // Generate TTS using the feedback text only
+      const parsedResponse = JSON.parse(jsonResponse);
+      const textToSpeak = parsedResponse.response.feedback + 
+        (parsedResponse.response.followUp ? ' ' + parsedResponse.response.followUp : '');
+
       const command = new SynthesizeSpeechCommand({
         Engine: 'neural',
         OutputFormat: 'mp3',
-        Text: textResponse,
+        Text: textToSpeak,
         VoiceId: 'Justin',
         TextType: 'text'
       });
 
       const ttsResponse = await pollyClient.send(command);
-
-      // Save audio and get public URL
       const audioUrl = await saveAndGetPublicUrl(Buffer.from(await ttsResponse.AudioStream.transformToByteArray()));
 
       res.json({
-        text: textResponse,
+        text: jsonResponse,
         audioUrl: audioUrl
       });
     } catch (error) {
       console.error('Error:', error);
-      res.status(500).json({ error: 'An error occurred: ' + error.message });
+      const errorResponse = {
+        analysis: {
+          score: 0,
+          isRelevant: false,
+          completesFrame: false
+        },
+        decision: {
+          action: "elaborate",
+          reason: "Error occurred"
+        },
+        response: {
+          feedback: "Let's try that again!",
+          followUp: null
+        }
+      };
+      res.status(200).json({ text: JSON.stringify(errorResponse) });
     }
   });
 });
