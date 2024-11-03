@@ -81,8 +81,8 @@ Remember:
 
   getCurrentQuestion() {
     const questions = [
-      `Where does ${this.topic} live?`,
-      `What does ${this.topic} need to survive?`,
+      `Where do ${this.topic} live?`,
+      `What do ${this.topic} need to survive?`,
       `What's something else ${this.topic} needs?`
     ];
     return questions[this.state.currentQuestionIndex];
