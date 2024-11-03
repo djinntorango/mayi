@@ -9,7 +9,7 @@
   display: flex;
   flex-direction: column;
   padding: 20px;
-  max-width: 70%;
+
   overflow-y: auto;
 }
 
@@ -22,7 +22,7 @@
 
 .message {
   margin-bottom: 20px;
-  max-width: 70%;
+
   clear: both;
 }
 
