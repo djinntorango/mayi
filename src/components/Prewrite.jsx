@@ -32,9 +32,15 @@ Evaluate if:
 3. The answer makes sense for ${this.topic}
 
 Remember:
-- Answers should be simple, like "Butterflies live in forests"
-- Only ask for clarification if the answer is off-topic or doesn't use the frame
-- Keep feedback very brief and encouraging`;
+- Move to next question if they used the frame AND answer is relevant
+- Only ask for clarification if answer is off-topic or doesn't use the frame
+- Use "complete" action for the final question
+- Keep feedback very brief and encouraging
+
+Required format:
+- Use "next" action to move to next question
+- Use "elaborate" action to ask for better answer
+- Use "complete" action for final question`;
   }
 
   processLLMResponse(llmResponse) {
