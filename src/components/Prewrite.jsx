@@ -36,13 +36,20 @@ function Prewrite() {
 
   // Initialize conversation
   useEffect(() => {
-    if (conversation.length === 0) {
-      setConversation([
-        { sender: 'system', text: topic ? `Your topic is: ${topic}` : '' },
-        { sender: 'system', text: storyQuestions[0] }
-      ].filter(msg => msg.text)); 
-    }
-  }, [topic]); 
+    // Always start a new conversation when topic changes
+    setConversation([
+      // Always show first message with topic (or without if none)
+      { sender: 'system', text: topic ? `Your topic is: ${topic}. ` : `Let's write a story! ` },
+      // Always show first question
+      { sender: 'system', text: storyQuestions[0] }
+    ]);
+  }, [topic]); // Re-run when topic changes
+  
+  // Add some console logs to debug
+  useEffect(() => {
+    console.log('Current topic:', topic);
+    console.log('Current conversation:', conversation);
+  }, [topic, conversation]);
 
   // Send story data to Storyline
   const updateStoryline = (responses) => {
