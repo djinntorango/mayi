@@ -9,9 +9,9 @@ export default class LearningAgent {
         `What's something else ${topic} needs?`
       ];
       this.frames = [
-        `${topic} lives in...`,
-        `To survive, ${topic} needs...`,
-        `Another thing ${topic} needs is...`
+        `${topic} live in `,
+        `${topic} need `,
+        `Another thing ${topic} needs is `
       ];
     }
   
