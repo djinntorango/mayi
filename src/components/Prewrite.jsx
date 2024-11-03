@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import '../styles/prewrite.css';
 
 function Prewrite() {
   const [conversation, setConversation] = useState([]);
@@ -8,14 +7,10 @@ function Prewrite() {
   const [isLoading, setIsLoading] = useState(false);
   const [topic, setTopic] = useState("");
 
-  const storyQuestions = [
-    "Let's write a story today! Who is the main character?",
-    "Where does the story take place?",
-    "What is the main problem or challenge in the story?",
-    "How is the problem solved?",
-    "What happens at the beginning of the story?",
-    "What important events happen in the middle of the story?",
-    "How does the story end?"
+  const generateQuestions = (topic) => [
+    `Where does/do ${topic} live?`,
+    `What does ${topic} need to survive?`,
+    `What's something else ${topic} needs?`
   ];
 
   // Get topic from URL parameters
@@ -29,42 +24,41 @@ function Prewrite() {
 
   // Set up conversation when topic changes
   useEffect(() => {
-    setConversation([
-      { sender: 'system', text: topic ? `Your topic is: ${topic}. ` : `Let's write a story! ` },
-      { sender: 'system', text: storyQuestions[0] }
-    ]);
+    if (topic) {
+      setConversation([
+        { sender: 'system', text: `Let's learn about ${topic}!` },
+        { sender: 'system', text: generateQuestions(topic)[0] }
+      ]);
+    }
   }, [topic]);
 
-  const updateStoryline = (responses) => {
+  const updateResponses = (responses) => {
     try {
-      const storyElements = {
-        character: responses[0]?.answer || '',
-        setting: responses[1]?.answer || '',
-        problem: responses[2]?.answer || '',
-        solution: responses[3]?.answer || '',
-        beginning: responses[4]?.answer || '',
-        middle: responses[5]?.answer || '',
-        ending: responses[6]?.answer || '',
-        isComplete: responses.length === storyQuestions.length
+      const habitatElements = {
+        habitat: responses[0]?.answer || '',
+        survivalNeeds: responses[1]?.answer || '',
+        additionalNeeds: responses[2]?.answer || '',
+        isComplete: responses.length === generateQuestions(topic).length
       };
 
       window.parent.postMessage({
-        type: 'STORY_UPDATE',
-        storyElements
+        type: 'HABITAT_UPDATE',
+        habitatElements
       }, '*');
 
     } catch (error) {
-      console.error('Error updating Storyline:', error);
+      console.error('Error updating responses:', error);
     }
   };
 
   const getAIResponse = async (userAnswer, previousResponses) => {
     try {
+      const questions = generateQuestions(topic);
       const currentProgress = previousResponses.length;
-      const isLastQuestion = currentProgress === storyQuestions.length - 1;
-      const currentQuestion = storyQuestions[currentProgress];
+      const isLastQuestion = currentProgress === questions.length - 1;
+      const currentQuestion = questions[currentProgress];
       
-      let corePrompt = `You are a writing teacher helping a student develop their story. 
+      let corePrompt = `You are a science teacher helping a student learn about ${topic}'s habitat and survival needs. 
       
       Previous responses:
       ${previousResponses.map(r => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n')}
@@ -80,9 +74,7 @@ function Prewrite() {
       ACTION: Choose exactly ONE of these:
       1. If the answer needs more development, write a specific follow-up question (without any labels or brackets).
       2. If the answer is sufficient and there are more questions, write "NEXT:" followed by the next question.
-      3. If this is the final question, write "FINAL:" followed by brief concluding feedback.
-
-      Remember: The first question is about the main character, the second about setting, etc. Make sure feedback and questions align with the current story element being discussed.`;
+      3. If this is the final question, write "FINAL:" followed by brief concluding feedback.`;
 
       const response = await fetch('https://prewriteresponse-co3kwnyxqq-uc.a.run.app', {
         method: 'POST',
@@ -130,7 +122,7 @@ function Prewrite() {
     const newUserResponses = [
       ...userResponses,
       {
-        question: storyQuestions[userResponses.length],
+        question: generateQuestions(topic)[userResponses.length],
         answer: userInput,
         feedback: feedback
       }
@@ -149,12 +141,12 @@ function Prewrite() {
     setConversation(newConversation);
     setUserResponses(newUserResponses);
     setUserInput("");
-    updateStoryline(newUserResponses);
+    updateResponses(newUserResponses);
     setIsLoading(false);
   };
 
   return (
-    <div className="prewrite-container main-container">
+    <div className="habitat-container main-container">
       <div className="chat-interface">
         <div className="conversation-box">
           {conversation.map((entry, index) => (
