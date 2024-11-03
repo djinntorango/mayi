@@ -34,51 +34,27 @@ function Prewrite() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Initialize conversation
   useEffect(() => {
-    try {
-      // Create a debug element
-      const debugDiv = document.createElement('div');
-      debugDiv.style.position = 'fixed';
-      debugDiv.style.top = '0';
-      debugDiv.style.right = '0';
-      debugDiv.style.background = '#000';
-      debugDiv.style.color = '#fff';
-      debugDiv.style.padding = '10px';
-      debugDiv.style.zIndex = '9999';
-      document.body.appendChild(debugDiv);
-  
-      // Try to get topic
-      const player = window.parent.GetPlayer();
-      debugDiv.textContent = 'Got player';
-      const topic = player.GetVar("topic");
-      debugDiv.textContent = `Got topic: ${topic}`;
+    const handleMessage = (event) => {
+      // For debugging
+      console.log('Message received:', event.data);
       
-      // Set initial conversation
-      setConversation([
-        { sender: 'system', text: topic ? `Your topic is: ${topic}. ` : `Let's write a story! ` },
-        { sender: 'system', text: storyQuestions[0] }
-      ]);
-      
-    } catch (error) {
-      // Show error in debug div
-      const debugDiv = document.createElement('div');
-      debugDiv.style.position = 'fixed';
-      debugDiv.style.top = '0';
-      debugDiv.style.right = '0';
-      debugDiv.style.background = '#f00';
-      debugDiv.style.color = '#fff';
-      debugDiv.style.padding = '10px';
-      debugDiv.style.zIndex = '9999';
-      debugDiv.textContent = `Error: ${error.message}`;
-      document.body.appendChild(debugDiv);
-      
-      // Fallback to just showing first question
-      setConversation([
-        { sender: 'system', text: storyQuestions[0] }
-      ]);
-    }
+      if (event.data.type === 'INIT_DATA') {
+        setTopic(event.data.topic);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
+
+  // Set up conversation when topic is received
+  useEffect(() => {
+    setConversation([
+      { sender: 'system', text: topic ? `Your topic is: ${topic}. ` : `Let's write a story! ` },
+      { sender: 'system', text: storyQuestions[0] }
+    ]);
+  }, [topic]);
 
   // Send story data to Storyline
   const updateStoryline = (responses) => {
