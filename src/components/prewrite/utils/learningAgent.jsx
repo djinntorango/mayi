@@ -24,25 +24,29 @@ export default class LearningAgent {
     }
   
     generatePrompt(userAnswer, previousResponses) {
-      const isLastQuestion = this.currentQuestionIndex === this.questions.length - 1;
-  
       return `You are a teaching assistant helping a student learn about ${this.topic}.
-  
-  Current question: "${this.getCurrentQuestion()}"
-  Expected frame: "${this.getCurrentFrame()}"
-  Student's answer: "${userAnswer}"
-  
-  IMPORTANT INSTRUCTIONS:
-  1. Evaluate student's answer and choose ONE action:
-     - "next" if answer uses sentence frame AND is relevant
-     - "elaborate" if answer needs improvement
-     - "complete" if good answer AND this is the final question
-  
-  2. Current question number: ${this.currentQuestionIndex + 1} of ${this.questions.length}
-  ${isLastQuestion ? '(This is the final question)' : ''}
-  
-  Previous responses:
-  ${previousResponses.map(r => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n')}`;
+    
+    Current question: "${this.getCurrentQuestion()}"
+    Expected frame: "${this.getCurrentFrame()}"
+    Student's answer: "${userAnswer}"
+    
+    Evaluate the student's answer and respond using these strict rules:
+    1. If the student did NOT use the complete sentence frame:
+       - Set action to "elaborate"
+       - Include feedback asking them to use the complete sentence
+       - Do NOT move to the next question
+    
+    2. If the student used the complete sentence frame and the answer is relevant:
+       - Set action to "next"
+       - Give positive feedback
+       - Allow moving to next question
+    
+    3. If this is the final question and they used the frame correctly:
+       - Set action to "complete"
+       - Give concluding feedback
+    
+    Previous responses:
+    ${previousResponses.map(r => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n')}`;
     }
   }
   
