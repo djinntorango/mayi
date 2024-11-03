@@ -7,7 +7,6 @@ function Prewrite() {
   const [userInput, setUserInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [topic, setTopic] = useState("");
-  const [debugMessages, setDebugMessages] = useState([]);
 
   const storyQuestions = [
     "Let's write a story today! Who is the main character?",
@@ -19,17 +18,10 @@ function Prewrite() {
     "How does the story end?"
   ];
 
-  const addDebug = (message) => {
-    console.log(message);
-    setDebugMessages(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
-  };
-
   // Get topic from URL parameters
   useEffect(() => {
-    addDebug('Component mounted, checking URL parameters');
     const params = new URLSearchParams(window.location.search);
     const topicFromUrl = params.get('topic');
-    addDebug(`Found topic in URL: ${topicFromUrl}`);
     if (topicFromUrl) {
       setTopic(decodeURIComponent(topicFromUrl));
     }
@@ -37,7 +29,6 @@ function Prewrite() {
 
   // Set up conversation when topic changes
   useEffect(() => {
-    addDebug(`Topic changed to: ${topic}`);
     setConversation([
       { sender: 'system', text: topic ? `Your topic is: ${topic}. ` : `Let's write a story! ` },
       { sender: 'system', text: storyQuestions[0] }
@@ -57,14 +48,12 @@ function Prewrite() {
         isComplete: responses.length === storyQuestions.length
       };
 
-      addDebug(`Sending story update: ${JSON.stringify(storyElements)}`);
       window.parent.postMessage({
         type: 'STORY_UPDATE',
         storyElements
       }, '*');
 
     } catch (error) {
-      addDebug(`Error updating Storyline: ${error.message}`);
       console.error('Error updating Storyline:', error);
     }
   };
@@ -114,7 +103,6 @@ function Prewrite() {
       return data.text;
 
     } catch (error) {
-      addDebug(`Error in AI response: ${error.message}`);
       return "I encountered an error. Let's continue with the next question.";
     }
   };
@@ -124,10 +112,8 @@ function Prewrite() {
     if (userInput.trim() === "" || isLoading) return;
 
     setIsLoading(true);
-    addDebug(`Processing user input: ${userInput}`);
     
     const aiResponse = await getAIResponse(userInput, userResponses);
-    addDebug(`Received AI response: ${aiResponse}`);
     
     const feedbackMatch = aiResponse.match(/FEEDBACK:(.*?)(?=ACTION:|$)/s);
     const actionMatch = aiResponse.match(/ACTION:(.*?)$/s);
@@ -169,26 +155,6 @@ function Prewrite() {
 
   return (
     <div className="prewrite-container main-container">
-      {/* Debug Panel */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        background: 'rgba(0,0,0,0.8)',
-        color: 'white',
-        padding: '10px',
-        maxHeight: '200px',
-        overflowY: 'auto',
-        fontSize: '12px',
-        zIndex: 9999,
-        width: '300px'
-      }}>
-        <h4 style={{ margin: '0 0 5px 0', color: '#fff' }}>Debug Messages:</h4>
-        {debugMessages.map((msg, i) => (
-          <div key={i} style={{ marginBottom: '3px', borderBottom: '1px solid #333' }}>{msg}</div>
-        ))}
-      </div>
-
       <div className="chat-interface">
         <div className="conversation-box">
           {conversation.map((entry, index) => (
