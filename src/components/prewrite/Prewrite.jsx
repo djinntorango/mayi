@@ -1,62 +1,109 @@
-// In src/Prewrite.js
-// Add this useEffect to handle initial sentence frame
-useEffect(() => {
-  if (agent) {
-    setUserInput(agent.getCurrentFrame());
-  }
-}, [agent]);
+import React, { useState, useEffect } from 'react';
+import { useAgent } from './hooks/useAgent';
+import { useConversation } from './hooks/useConversation';
+import { getAIResponse } from './hooks/useAIResponse';
+import { TypingIndicator } from './components/TypingIndicator';
+import { Message } from './components/Message';
+import { ChatInput } from './components/ChatInput';
+import { updateParentResponses } from './utils/responseHandler';
+import './prewrite.css';
 
-// Modify the handleUserInput function to properly handle elaboration
-const handleUserInput = async (e) => {
-  e.preventDefault();
-  if (!userInput.trim() || isLoading || !agent) return;
+function Prewrite() {
+  const params = new URLSearchParams(window.location.search);
+  const { agent, topic } = useAgent(params.get('topic'));
+  const { conversation, setConversation, conversationRef } = useConversation(agent, topic);
+  const [userResponses, setUserResponses] = useState([]);
+  const [userInput, setUserInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const currentInput = userInput;
-  setUserInput(''); // Clear input immediately
-  setConversation(prev => [...prev, { sender: 'user', text: currentInput }]);
-  setIsLoading(true);
-  
-  const result = await getAIResponse(currentInput, userResponses);
-  
-  // Add the feedback first
-  setConversation(prev => [...prev, { sender: 'system', text: result.response.feedback }]);
-
-  // Handle elaboration - crucial to check this first
-  if (result.decision.action === 'elaborate') {
-    if (result.response.followUp) {
-      setConversation(prev => [...prev, { sender: 'system', text: result.response.followUp }]);
+  // Set initial sentence frame when agent is ready
+  useEffect(() => {
+    if (agent) {
+      setUserInput(agent.getCurrentFrame());
     }
-    setUserInput(agent.getCurrentFrame()); // Keep the same frame for elaboration
-    setIsLoading(false);
-    return; // Exit early - don't process anything else
-  }
+  }, [agent]);
 
-  // Only proceed if we're not elaborating
-  if (result.decision.action === 'next' || result.decision.action === 'complete') {
-    const newUserResponses = [
-      ...userResponses,
-      {
+  const handleUserInput = async (e) => {
+    e.preventDefault();
+    if (!userInput.trim() || isLoading || !agent) return;
+
+    const currentInput = userInput;
+    setUserInput(''); // Clear input immediately
+    setConversation(prev => [...prev, { sender: 'user', text: currentInput }]);
+    setIsLoading(true);
+
+    const result = await getAIResponse(agent, currentInput, userResponses);
+
+    // Add AI feedback first
+    setConversation(prev => [...prev, { sender: 'system', text: result.response.feedback }]);
+
+    // Handle elaboration first
+    if (result.decision.action === 'elaborate') {
+      if (result.response.followUp) {
+        setConversation(prev => [...prev, { 
+          sender: 'system', 
+          text: result.response.followUp 
+        }]);
+      }
+      // Always reset to current frame when elaborating
+      setUserInput(agent.getCurrentFrame());
+      setIsLoading(false);
+      return; // Exit early if elaborating
+    }
+
+    // Handle progression only if not elaborating
+    if (result.decision.action === 'next' || result.decision.action === 'complete') {
+      const newUserResponses = [...userResponses, {
         question: agent.getCurrentQuestion(),
         answer: currentInput,
-        feedback: result.response.feedback,
-        analysis: result.analysis
+        feedback: result.response.feedback
+      }];
+      setUserResponses(newUserResponses);
+
+      if (result.decision.action === 'next') {
+        agent.currentQuestionIndex++;
+        // Add next question to conversation
+        setConversation(prev => [...prev, { 
+          sender: 'system', 
+          text: agent.getCurrentQuestion()
+        }]);
+        // Set frame for next question
+        setUserInput(agent.getCurrentFrame());
+      } else {
+        // Clear input if complete
+        setUserInput('');
       }
-    ];
 
-    setUserResponses(newUserResponses);
-    updateResponses(newUserResponses);
-
-    if (result.decision.action === 'next') {
-      agent.currentQuestionIndex++;
-      setConversation(prev => [...prev, { 
-        sender: 'system', 
-        text: agent.getCurrentQuestion()
-      }]);
-      setUserInput(agent.getCurrentFrame());
-    } else {
-      setUserInput('');
+      updateParentResponses(newUserResponses);
     }
-  }
 
-  setIsLoading(false);
-};
+    setIsLoading(false);
+  };
+
+  return (
+    <div className="prewrite-container main-container">
+      <div className="chat-interface">
+        <div className="conversation-box" ref={conversationRef}>
+          {conversation.map((entry, index) => (
+            <Message key={index} sender={entry.sender} text={entry.text} />
+          ))}
+          {isLoading && (
+            <div className="message system">
+              <div className="content">
+                <TypingIndicator />
+              </div>
+            </div>
+          )}
+        </div>
+        <ChatInput
+          userInput={userInput}
+          setUserInput={setUserInput}
+          handleSubmit={handleUserInput}
+          isLoading={isLoading}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default Prewrite;
