@@ -1,6 +1,6 @@
 // src/hooks/useAgent.js
 import { useState, useEffect } from 'react';
-import LearningAgent from '../utils/LearningAgent.jsx'; 
+import LearningAgent from '../../utils/LearningAgent'; 
 
 export function useAgent(topicFromUrl) {
   const [agent, setAgent] = useState(null);
