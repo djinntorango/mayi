@@ -24,44 +24,53 @@ function Prewrite() {
     setDebugMessages(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
   };
 
+  // Check for topic when component mounts
   useEffect(() => {
     addDebug('Component mounted');
-    
-    // Try to detect if we're in Storyline
-    try {
-      addDebug('Checking for Storyline environment...');
-      if (window.parent && window.parent.GetPlayer) {
-        addDebug('Found Storyline GetPlayer');
-        const player = window.parent.GetPlayer();
-        const topicFromStoryline = player.GetVar('topic');
-        addDebug(`Got topic directly from Storyline: ${topicFromStoryline}`);
-        setTopic(topicFromStoryline);
-      } else if (window.GetPlayer) {
-        addDebug('Found GetPlayer in current window');
-        const player = window.GetPlayer();
-        const topicFromStoryline = player.GetVar('topic');
-        addDebug(`Got topic from current window: ${topicFromStoryline}`);
-        setTopic(topicFromStoryline);
-      } else {
-        addDebug('Could not find Storyline player');
-      }
-    } catch (error) {
-      addDebug(`Error accessing Storyline: ${error.message}`);
-    }
 
-    // Keep the message listener just in case
-    function handleMessage(event) {
-      addDebug(`Received message: ${JSON.stringify(event.data)}`);
-      if (event.data.type === 'SET_TOPIC' || event.data.type === 'INIT_DATA') {
-        addDebug(`Setting topic from message: ${event.data.topic}`);
-        setTopic(event.data.topic);
+    // Function to check for topic
+    const checkForTopic = () => {
+      addDebug('Checking for storylineTopic...');
+      // Check if we can access window.parent
+      try {
+        if (window.parent && window.parent.storylineTopic !== undefined) {
+          addDebug(`Found topic in parent: ${window.parent.storylineTopic}`);
+          setTopic(window.parent.storylineTopic);
+          return true;
+        }
+      } catch (e) {
+        addDebug(`Error accessing parent: ${e.message}`);
       }
-    }
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+      // Check current window
+      if (window.storylineTopic !== undefined) {
+        addDebug(`Found topic in window: ${window.storylineTopic}`);
+        setTopic(window.storylineTopic);
+        return true;
+      }
+
+      addDebug('Topic not found');
+      return false;
+    };
+
+    // Try immediately
+    if (!checkForTopic()) {
+      // If not found, start polling
+      addDebug('Starting topic polling');
+      const pollInterval = setInterval(() => {
+        if (checkForTopic()) {
+          addDebug('Topic found, stopping polling');
+          clearInterval(pollInterval);
+        }
+      }, 500); // Check every 500ms
+
+      // Stop polling after 10 seconds
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        addDebug('Polling timeout reached');
+      }, 10000);
+    }
   }, []);
-
 
   useEffect(() => {
     addDebug(`Topic changed to: ${topic}`);
