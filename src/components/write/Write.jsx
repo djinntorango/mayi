@@ -35,16 +35,38 @@ function WritingEditor() {
       // Set initial editor content
       const initialContent = generateInitialContent(decodedData);
       setEditorContent(initialContent);
+
+      // Send initial content to Storyline
+      updateStorylineVariable(initialContent);
     }
   }, []);
 
   const generateInitialContent = (data) => {
-    return `
+    const content = `
       <h2>All About ${data.topic}</h2>
       <p>${data.habitat}</p>
       <p>${data.survivalNeeds}</p>
       <p>${data.additionalNeeds}</p>
     `.trim();
+    return content;
+  };
+
+  const updateStorylineVariable = (content) => {
+    // Strip HTML tags and get clean text
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    const cleanText = tempDiv.textContent || tempDiv.innerText || '';
+
+    // Send message to Storyline
+    window.parent.postMessage({
+      type: 'STORY_UPDATE',
+      storyElements: {
+        writtenStory: cleanText // This will be the variable name in Storyline
+      }
+    }, '*');
+
+    // Debug log
+    console.log('Sending to Storyline:', cleanText);
   };
 
   const modules = {
@@ -65,11 +87,8 @@ function WritingEditor() {
 
   const handleChange = (content) => {
     setEditorContent(content);
-    window.parent.postMessage({
-      type: 'WRITING_UPDATE',
-      content,
-      storyData
-    }, '*');
+    // Update Storyline with the new content
+    updateStorylineVariable(content);
   };
 
   return (
