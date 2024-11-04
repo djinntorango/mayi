@@ -44,8 +44,8 @@ function WritingEditor() {
   const generateInitialContent = (data) => {
     const content = `
       <h2>All About ${data.topic}</h2>
-      <p>${data.habitat} </p>
-      <p>${data.survivalNeeds} </p>
+      <p>${data.habitat}</p>
+      <p>${data.survivalNeeds}</p>
       <p>${data.additionalNeeds}</p>
     `.trim();
     return content;
@@ -55,19 +55,22 @@ function WritingEditor() {
     // Strip HTML tags and get clean text
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = content;
+    // Add space after each element to preserve sentence spacing
+    tempDiv.querySelectorAll('p, h2').forEach(element => {
+        element.insertAdjacentText('afterend', ' ');
+    });
     const cleanText = tempDiv.textContent || tempDiv.innerText || '';
 
     // Send message to Storyline
     window.parent.postMessage({
-      type: 'STORY_UPDATE',
-      storyElements: {
-        writtenStory: cleanText // This will be the variable name in Storyline
-      }
+        type: 'STORY_UPDATE',
+        storyElements: {
+            writtenStory: cleanText
+        }
     }, '*');
 
-    // Debug log
     console.log('Sending to Storyline:', cleanText);
-  };
+};
 
   const modules = {
     toolbar: [
