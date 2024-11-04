@@ -284,3 +284,146 @@ exports.prewriteResponse = onRequest({ cors: true, secrets: [openAI, awsAccessKe
     }
   });
 });
+
+exports.evaluateWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey, awsSecretKey] }, async (req, res) => {
+  cors(req, res, async () => {
+    try {
+      if (!openaiApiKey) {
+        throw new Error('OpenAI API key is not available.');
+      }
+
+      const { writtenStory, storyData } = req.body;
+
+      if (!writtenStory || !storyData) {
+        return res.status(400).json({ error: 'Written story and story data are required.' });
+      }
+
+      const systemPrompt = `You are an AI teaching assistant evaluating a young student's writing (around 8 years old). You will receive their written story and the original information they were given.
+
+      You must respond in valid JSON format following this exact structure:
+      {
+        "evaluation": {
+          "relevanceScore": <number between 0 and 1>,
+          "mechanicsScore": <number between 0 and 1>,
+          "totalScore": <number between 0 and 1>,
+          "details": {
+            "hasCorrectPunctuation": <boolean>,
+            "hasCorrectCapitalization": <boolean>,
+            "hasCorrectSpelling": <boolean>,
+            "containsOriginalInfo": <boolean>
+          }
+        },
+        "feedback": {
+          "mechanics": <string: simple note about punctuation, spelling, or capitals if needed>,
+          "relevance": <string: simple note about including all the important information>
+        }
+      }
+
+      Scoring Guidelines:
+      1. Relevance Score (0.5 of total):
+         - Check if the story includes all key information from the original text
+         - Information should match what was provided
+      
+      2. Mechanics Score (0.5 of total):
+         - Correct punctuation at end of sentences (0.2)
+         - Proper capitalization at start of sentences (0.2)
+         - Correct spelling of basic words (0.1)
+
+      Total score should be the average of relevanceScore and mechanicsScore.
+      
+      Original information to check against:
+      Topic: ${storyData.topic}
+      Habitat: ${storyData.habitat}
+      Survival Needs: ${storyData.survivalNeeds}
+      Additional Information: ${storyData.additionalNeeds}
+
+      Student's written story to evaluate:
+      ${writtenStory}`;
+
+      const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: 'Please evaluate this writing.' }
+          ],
+          temperature: 0.7,
+          response_format: { type: "json_object" }
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const jsonResponse = response.data.choices[0].message.content;
+
+      // Validate JSON structure
+      try {
+        JSON.parse(jsonResponse);
+      } catch (e) {
+        const fallbackResponse = {
+          evaluation: {
+            relevanceScore: 0.5,
+            mechanicsScore: 0.5,
+            totalScore: 0.5,
+            details: {
+              hasCorrectPunctuation: true,
+              hasCorrectCapitalization: true,
+              hasCorrectSpelling: true,
+              containsOriginalInfo: true
+            }
+          },
+          feedback: {
+            mechanics: "Remember to check your capitals and periods.",
+            relevance: "Make sure to include all the important information."
+          }
+        };
+        return res.json({ text: JSON.stringify(fallbackResponse) });
+      }
+
+      // Generate TTS using combined feedback
+      const parsedResponse = JSON.parse(jsonResponse);
+      const textToSpeak = `${parsedResponse.feedback.mechanics} ${parsedResponse.feedback.relevance}`;
+
+      const command = new SynthesizeSpeechCommand({
+        Engine: 'neural',
+        OutputFormat: 'mp3',
+        Text: textToSpeak,
+        VoiceId: 'Justin',
+        TextType: 'text'
+      });
+
+      const ttsResponse = await pollyClient.send(command);
+      const audioUrl = await saveAndGetPublicUrl(Buffer.from(await ttsResponse.AudioStream.transformToByteArray()));
+
+      res.json({
+        text: jsonResponse,
+        audioUrl: audioUrl
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      const errorResponse = {
+        evaluation: {
+          relevanceScore: 0,
+          mechanicsScore: 0,
+          totalScore: 0,
+          details: {
+            hasCorrectPunctuation: false,
+            hasCorrectCapitalization: false,
+            hasCorrectSpelling: false,
+            containsOriginalInfo: false
+          }
+        },
+        feedback: {
+          mechanics: "Let's check our spelling and punctuation.",
+          relevance: "Make sure to include the important information."
+        }
+      };
+      res.status(200).json({ text: JSON.stringify(errorResponse) });
+    }
+  });
+});
