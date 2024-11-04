@@ -44,8 +44,8 @@ function WritingEditor() {
   const generateInitialContent = (data) => {
     const content = `
       <h2>All About ${data.topic}</h2>
-      <p>${data.habitat}</p>
-      <p>${data.survivalNeeds}</p>
+      <p>${data.habitat} </p>
+      <p>${data.survivalNeeds} </p>
       <p>${data.additionalNeeds}</p>
     `.trim();
     return content;
