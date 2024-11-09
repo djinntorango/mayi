@@ -60,7 +60,7 @@ function WritingEditor() {
     window.parent.postMessage({
         type: 'STORY_UPDATE',
         storyElements: {
-            writtenStory: cleanText
+            cleanText: cleanText
         }
     }, '*');
   };
