@@ -314,14 +314,14 @@ exports.evaluateWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey
           }
         },
         "feedback": {
-          "mechanics": <string: simple note about punctuation, spelling, or capitals if needed>,
-          "relevance": <string: simple note about including all the important information>
+          "strengths": <string: simple note about what student did well>,
+          "improvements": <string: simple note about punctuation, spelling, or capitals if needed>
         }
       }
 
       Scoring Guidelines:
       1. Relevance Score (0.5 of total):
-         - Check if the story includes all key information from the original text
+         - Check if the writing includes information that is relevant to the topic
          - Information should match what was provided
       
       2. Mechanics Score (0.5 of total):
@@ -335,10 +335,7 @@ exports.evaluateWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey
       Topic: ${storyData.topic}
       Habitat: ${storyData.habitat}
       Survival Needs: ${storyData.survivalNeeds}
-      Additional Information: ${storyData.additionalNeeds}
-
-      Student's written story to evaluate:
-      ${writtenStory}`;
+      Additional Information: ${storyData.additionalNeeds}`;
 
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
@@ -346,7 +343,7 @@ exports.evaluateWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey
           model: 'gpt-3.5-turbo',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: 'Please evaluate this writing.' }
+            { role: 'user', content: `Please evaluate this writing: ${writtenStory}` }
           ],
           temperature: 0.7,
           response_format: { type: "json_object" }
@@ -378,8 +375,8 @@ exports.evaluateWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey
             }
           },
           feedback: {
-            mechanics: "Remember to check your capitals and periods.",
-            relevance: "Make sure to include all the important information."
+            strengths: "Remember to check your capitals and periods.",
+            improvements: "Make sure to include all the important information."
           }
         };
         return res.json({ text: JSON.stringify(fallbackResponse) });
@@ -387,7 +384,7 @@ exports.evaluateWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey
 
       // Generate TTS using combined feedback
       const parsedResponse = JSON.parse(jsonResponse);
-      const textToSpeak = `${parsedResponse.feedback.mechanics} ${parsedResponse.feedback.relevance}`;
+      const textToSpeak = `${parsedResponse.feedback.strengths} ${parsedResponse.feedback.improvements}`;
 
       const command = new SynthesizeSpeechCommand({
         Engine: 'neural',
@@ -419,8 +416,165 @@ exports.evaluateWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey
           }
         },
         feedback: {
-          mechanics: "Let's check our spelling and punctuation.",
-          relevance: "Make sure to include the important information."
+          strengths: "You capitalized the first letter of the sentence.",
+          improvements: "Make sure to spell 'because' correctly and capitalize names."
+        }
+      };
+      res.status(200).json({ text: JSON.stringify(errorResponse) });
+    }
+  });
+});
+
+exports.reviseWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey, awsSecretKey] }, async (req, res) => {
+  cors(req, res, async () => {
+    try {
+      if (!openaiApiKey) {
+        throw new Error('OpenAI API key is not available.');
+      }
+
+      const { writtenStory, storyData } = req.body;
+
+      if (!writtenStory || !storyData) {
+        return res.status(400).json({ error: 'Written story and story data are required.' });
+      }
+
+      const systemPrompt = `You are an AI teaching assistant helping a young student (around 8 years old) revise their writing for content and clarity. You will receive their written story and the original information they were given.
+
+      You must respond in valid JSON format following this exact structure:
+      {
+        "revision": {
+          "ideaScore": <number between 0 and 1>,
+          "detailScore": <number between 0 and 1>,
+          "organizationScore": <number between 0 and 1>,
+          "totalScore": <number between 0 and 1>,
+          "details": {
+            "hasIntroduction": <boolean>,
+            "hasClearSequence": <boolean>,
+            "includesAllTopics": <boolean>,
+            "hasDescriptiveWords": <boolean>
+          }
+        },
+        "feedback": {
+          "strengths": <string: what the student did well>,
+          "improvements": <string: specific suggestions for adding details or clarifying ideas>
+        }
+      }
+
+      Scoring Guidelines:
+      1. Idea Score (0.4 of total):
+         - Main ideas are clear and on topic
+         - Information matches what was provided
+         - Ideas are fully developed
+      
+      2. Detail Score (0.4 of total):
+         - Includes specific details about the topic
+         - Uses descriptive words
+         - Provides examples or explanations
+      
+      3. Organization Score (0.2 of total):
+         - Has a clear beginning
+         - Events or ideas follow a logical sequence
+         - Similar ideas are grouped together
+
+      Total score should weight the three scores as specified above.
+      
+      Original information to check against:
+      Topic: ${storyData.topic}
+      Habitat: ${storyData.habitat}
+      Survival Needs: ${storyData.survivalNeeds}
+      Additional Information: ${storyData.additionalNeeds}
+
+       Important Notes for Feedback:
+      - Use encouraging, age-appropriate language
+      - Give specific examples of where to add details
+      - Suggest sensory words or descriptive phrases they could use
+      - Point out strong parts of their writing
+      - Keep suggestions focused on content and clarity, not grammar or spelling
+      - Limit to 1 main revision suggestion`;
+
+      const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Please evaluate this writing: ${writtenStory}` }
+          ],
+          temperature: 0.7,
+          response_format: { type: "json_object" }
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const jsonResponse = response.data.choices[0].message.content;
+
+      // Validate JSON structure
+      try {
+        JSON.parse(jsonResponse);
+      } catch (e) {
+        const fallbackResponse = {
+          revision: {
+            ideaScore: 0.5,
+            detailScore: 0.5,
+            organizationScore: 0.5,
+            totalScore: 0.5,
+            details: {
+              hasIntroduction: true,
+              hasClearSequence: true,
+              includesAllTopics: true,
+              hasDescriptiveWords: true
+            }
+          },
+          feedback: {
+            strengths: "You've made a good start with your story!",
+            improvements: "Focus on adding more descriptive words to make your story come alive."
+          }
+        };
+        return res.json({ text: JSON.stringify(fallbackResponse) });
+      }
+
+      // Generate TTS using combined feedback
+      const parsedResponse = JSON.parse(jsonResponse);
+      const textToSpeak = `${parsedResponse.feedback.strengths} ${parsedResponse.feedback.improvements}`;
+
+      const command = new SynthesizeSpeechCommand({
+        Engine: 'neural',
+        OutputFormat: 'mp3',
+        Text: textToSpeak,
+        VoiceId: 'Justin',
+        TextType: 'text'
+      });
+
+      const ttsResponse = await pollyClient.send(command);
+      const audioUrl = await saveAndGetPublicUrl(Buffer.from(await ttsResponse.AudioStream.transformToByteArray()));
+
+      res.json({
+        text: jsonResponse,
+        audioUrl: audioUrl
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      const errorResponse = {
+        revision: {
+          ideaScore: 0,
+          detailScore: 0,
+          organizationScore: 0,
+          totalScore: 0,
+          details: {
+            hasIntroduction: false,
+            hasClearSequence: false,
+            includesAllTopics: false,
+            hasDescriptiveWords: false
+          }
+        },
+        feedback: {
+          strengths: "You've started writing your story, which is great!",
+          improvements: "Focus on adding more details to your story"
         }
       };
       res.status(200).json({ text: JSON.stringify(errorResponse) });

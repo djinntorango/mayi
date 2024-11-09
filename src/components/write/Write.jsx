@@ -26,7 +26,8 @@ function WritingEditor() {
         topic: decodeURIComponent(topicFromUrl),
         habitat: decodeURIComponent(habitatFromUrl || ''),
         survivalNeeds: decodeURIComponent(survivalFromUrl || ''),
-        additionalNeeds: decodeURIComponent(additionalFromUrl || '')
+        additionalNeeds: decodeURIComponent(additionalFromUrl || ''),
+        cleanText: decodeURIComponent(cleanTextFromUrl || '')
       };
 
       setTopic(decodedData.topic);
@@ -44,6 +45,7 @@ function WritingEditor() {
       <p>${data.habitat}</p>
       <p>${data.survivalNeeds}</p>
       <p>${data.additionalNeeds}</p>
+      <p>${data.cleanText}</p>
     `.trim();
     return content;
   };
