@@ -20,6 +20,7 @@ function WritingEditor() {
     const habitatFromUrl = params.get('habitat');
     const survivalFromUrl = params.get('survivalNeeds');
     const additionalFromUrl = params.get('additionalNeeds');
+    const cleanTextFromUrl = params.get('cleanText');
 
     if (topicFromUrl) {
       const decodedData = {
