@@ -1,5 +1,10 @@
 /* write.css */
-
+html {
+  overflow: hidden !important;
+}
+body {
+  background: transparent !important;
+}
 :root {
     --primary-color: #4A90E2;
     --secondary-color: #F5A623;
