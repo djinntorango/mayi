@@ -125,11 +125,14 @@ Remember: Always maintain an encouraging, patient tone appropriate for young lea
 
       const textResponse = response.data.choices[0].message.content;
 
+      const encodedText = new TextEncoder().encode(textResponse);
+      const decodedText = new TextDecoder('utf-8').decode(encodedText);
+
       // Generate TTS using Amazon Polly
       const command = new SynthesizeSpeechCommand({
         Engine: 'neural',
         OutputFormat: 'mp3',
-        Text: textResponse,
+        Text: decodedText,
         VoiceId: 'ZhiYu',
         TextType: 'text'
       });
