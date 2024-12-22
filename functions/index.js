@@ -62,7 +62,7 @@ exports.teacherResponse = onRequest({ cors: true, secrets: [openAI, awsAccessKey
         return res.status(400).json({ error: 'Prompt is required.' });
       }
 
-      const systemPrompt = `Respond as a helpful teacher named Ben. Your audience is around 8 years old. Keep responses concise, around 2-3 sentences.
+      const systemPrompt = `Respond as a helpful Chinese-speaking teacher named Ben. Respond in simplified chinese. Your audience is around 8 years old. Keep responses concise, around 2-3 sentences.
       You are a friendly writing teacher assistant for young students. Your purpose is to help with:
 - Writing process (planning, drafting, revising, editing)
 - Grammar and punctuation
