@@ -130,7 +130,7 @@ Remember: Always maintain an encouraging, patient tone appropriate for young lea
         Engine: 'neural',
         OutputFormat: 'mp3',
         Text: textResponse,
-        VoiceId: 'Justin',
+        VoiceId: 'ZhiYu',
         TextType: 'text'
       });
 
@@ -252,7 +252,7 @@ exports.prewriteResponse = onRequest({ cors: true, secrets: [openAI, awsAccessKe
         Engine: 'neural',
         OutputFormat: 'mp3',
         Text: textToSpeak,
-        VoiceId: 'Justin',
+        VoiceId: 'ZhiYu',
         TextType: 'text'
       });
 
@@ -390,7 +390,7 @@ exports.evaluateWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey
         Engine: 'neural',
         OutputFormat: 'mp3',
         Text: textToSpeak,
-        VoiceId: 'Justin',
+        VoiceId: 'ZhiYu',
         TextType: 'text'
       });
 
@@ -546,7 +546,7 @@ exports.reviseWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey, 
         Engine: 'neural',
         OutputFormat: 'mp3',
         Text: textToSpeak,
-        VoiceId: 'Justin',
+        VoiceId: 'ZhiYu',
         TextType: 'text'
       });
 
