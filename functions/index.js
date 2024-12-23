@@ -56,14 +56,15 @@ exports.teacherResponse = onRequest({ cors: true, secrets: [openAI, awsAccessKey
         throw new Error('OpenAI API key is not available.');
       }
 
-      const { corePrompt, prompt } = req.body;
+      const { corePrompt, prompt, language = 'en' } = req.body;
 
       if (!prompt) {
         return res.status(400).json({ error: 'Prompt is required.' });
       }
 
-      const systemPrompt = `Respond as a helpful Chinese-speaking teacher named Ben. Respond in simplified chinese. Your audience is around 8 years old. Keep responses concise, around 2-3 sentences.
-      You are a friendly writing teacher assistant for young students. Your purpose is to help with:
+      const systemPrompts = {
+        en: `Respond as a helpful English-speaking teacher named Justin. Respond in English. Your audience is around 8 years old. Keep responses concise, around 2-3 sentences.
+        You are a friendly writing teacher assistant for young students. Your purpose is to help with:
 - Writing process (planning, drafting, revising, editing)
 - Grammar and punctuation
 - Spelling and phonics
@@ -86,23 +87,36 @@ Important guidelines:
 5. Limit responses to 2-3 sentences for clarity
 
 If a student asks about topics unrelated to writing, language arts, or the current lesson, respond politely with:
-"I'm your writing helper! I can answer questions about writing, grammar, spelling, and today's lesson. What would you like to know about those topics?"
+"I'm your writing helper! I can answer questions about writing, grammar, spelling, and today's lesson. What would you like to know about those topics?"`,
 
-Examples of appropriate questions you can answer:
-- "How do I start my story?"
-- "What is a verb?"
-- "How do I spell 'because'?"
-- "What goes at the end of a question?"
-- "How can I make my writing better?"
+        zh: `Respond as a helpful Chinese-speaking teacher named Ben. Respond in simplified Chinese. Your audience is around 8 years old. Keep responses concise, around 2-3 sentences.
+        你是一位友好的写作老师助手，为年轻学生提供帮助。你的目的是协助：
+- 写作过程（计划、起草、修改、编辑）
+- 语法和标点符号
+- 拼写和语音
+- 句子结构
+- 词汇
+- 故事元素（人物、情节、背景）
+- 写作类型（叙事、信息、说服）
+- 评估学生写作
+- 评估学生活动响应
+- 课程背景：
+问：这节课多长时间？
+答：大约15分钟。
+${corePrompt}
 
-Examples of questions you should redirect:
-- "What's the capital of France?"
-- "How do I solve math problems?"
-- "What's the weather like?"
+重要指导原则：
+1. 保持回答清晰、简单和鼓励性 - 记住你在和年轻学生交谈
+2. 使用适合年龄的例子和解释
+3. 对于语法或写作规则，提供简单的例子来说明
+4. 给予反馈时，总是从正面开始
+5. 将回答限制在2-3句话以保持清晰
 
-Remember: Always maintain an encouraging, patient tone appropriate for young learners.
-      `;
+如果学生询问与写作、语言艺术或当前课程无关的话题，请礼貌地回答：
+"我是你的写作助手！我可以回答关于写作、语法、拼写和今天课程的问题。你想了解这些主题的什么内容呢？"`
+      };
 
+      const systemPrompt = systemPrompts[language];
       console.log(systemPrompt);
 
       const response = await axios.post(
@@ -128,15 +142,16 @@ Remember: Always maintain an encouraging, patient tone appropriate for young lea
       const encodedText = new TextEncoder().encode(textResponse);
       const decodedText = new TextDecoder('utf-8').decode(encodedText);
 
-      // Generate TTS using Amazon Polly
-      const command = new SynthesizeSpeechCommand({
+      // Configure TTS based on language
+      const ttsConfig = {
         Engine: 'neural',
         OutputFormat: 'mp3',
         Text: decodedText,
-        VoiceId: 'ZhiYu',
+        VoiceId: language === 'zh' ? 'Zhiyu' : 'Justin',
         TextType: 'text'
-      });
+      };
 
+      const command = new SynthesizeSpeechCommand(ttsConfig);
       const ttsResponse = await pollyClient.send(command);
 
       // Save audio and get public URL
@@ -255,7 +270,7 @@ exports.prewriteResponse = onRequest({ cors: true, secrets: [openAI, awsAccessKe
         Engine: 'neural',
         OutputFormat: 'mp3',
         Text: textToSpeak,
-        VoiceId: 'ZhiYu',
+        VoiceId: 'Zhiyu',
         TextType: 'text'
       });
 
@@ -393,7 +408,7 @@ exports.evaluateWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey
         Engine: 'neural',
         OutputFormat: 'mp3',
         Text: textToSpeak,
-        VoiceId: 'ZhiYu',
+        VoiceId: 'Zhiyu',
         TextType: 'text'
       });
 
@@ -549,7 +564,7 @@ exports.reviseWriting = onRequest({ cors: true, secrets: [openAI, awsAccessKey, 
         Engine: 'neural',
         OutputFormat: 'mp3',
         Text: textToSpeak,
-        VoiceId: 'ZhiYu',
+        VoiceId: 'Zhiyu',
         TextType: 'text'
       });
 
